@@ -4,7 +4,7 @@
 
 **Awaken: Efficient Full-Duplex Adaptation with Capability Retention**
 
-[![Blog](https://img.shields.io/badge/Blog-Project%20Page-orange)](webpage/index.html)
+[![Project Page](https://img.shields.io/badge/Blog-Project%20Page-orange)](https://avera-labs.github.io/AwakenFullDuplex/)
 [![GitHub](https://img.shields.io/badge/GitHub-Code-blue)](https://github.com/avera-labs/AwakenFullDuplex)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Model-yellow)](https://huggingface.co/openmartdev/awaken-full-duplex)
 [![Base model](https://img.shields.io/badge/Base-Fun--Audio--Chat--8B-green)](https://huggingface.co/FunAudioLLM/Fun-Audio-Chat-8B)
