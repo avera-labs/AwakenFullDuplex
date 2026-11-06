@@ -1,0 +1,63 @@
+[project]
+name = "awaken-chat"
+version = "0.1.0"
+description = "Awaken Chat: full-duplex speech-to-speech conversation model (inference)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "torch>=2.7",
+    "torchaudio>=2.7",
+    "transformers>=4.52,<4.53",
+    "safetensors>=0.4",
+    "huggingface-hub>=0.24",
+    "numpy>=1.26,<2.0",
+    "soundfile>=0.12",
+    "sphn>=0.2",
+    "hyperpyyaml>=1.2",
+    "omegaconf>=2.3",
+    "einops>=0.7",
+    "x-transformers>=1.30",
+    "scipy>=1.10",
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+    "websockets>=12",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "tensorrt-cu12>=10 ; sys_platform == 'linux'",
+]
+
+[project.optional-dependencies]
+fast = ["flash-attn>=2.6"]
+voice = ["onnxruntime-gpu>=1.18"]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10"]
+
+[project.scripts]
+awaken-server = "awaken_chat.cli:server_main"
+awaken-offline = "awaken_chat.cli:offline_main"
+awaken-voice = "awaken_chat.cli:voice_main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["awaken_chat*"]
+
+[tool.setuptools.package-data]
+awaken_chat = ["codec/cosyvoice/*.yaml"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["awaken_chat/codec/cosyvoice"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E501", "B905"]
+"tests/*" = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

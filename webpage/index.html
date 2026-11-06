@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awaken: Efficient Full-Duplex Adaptation with Capability Retention</title>
+<style>
+:root{
+  color-scheme: light;
+  --ink:#1f2a3b; --ink-2:#4a5a70; --muted:#7a879a; --line:#e3e8f0; --soft:#f6f8fc;
+  --teal:#2b8aa3; --blue-t:#e5f3f7; --lav-t:#eeeafa; --amber-t:#fff2dc; --mint-t:#e6f4ec; --rose-t:#fbe9e4;
+  --grpo:#e0702a; --sft:#f2bd8a; --ext:#b9c3d2; --ext-d:#8d9aae;
+  --maxw:720px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--ink);
+  font:17px/1.68 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none;border-bottom:1px solid #b9dce6}
+a:hover{border-bottom-color:var(--teal)}
+p{margin:0 0 1.05em}
+strong{font-weight:620}
+code{font:14.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+
+/* brand bar */
+.brand-bar{border-bottom:1px solid var(--line)}
+.brand-bar-in{max-width:1180px;min-height:48px;margin:0 auto;padding:0 28px;display:flex;align-items:center}
+.brand-mark{display:inline-flex;align-items:center;min-height:44px;border:0}
+.brand-mark img{display:block;height:24px;width:auto}
+.brand-mark:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* hero */
+.hero{background:linear-gradient(160deg,#eef6fa 0%,#f3f0fb 55%,#fff 100%);border-bottom:1px solid var(--line)}
+.hero-heading{max-width:1180px;margin:0 auto;padding:clamp(44px,5.5vw,72px) 28px 44px;text-align:center}
+.hero-in{max-width:848px;margin:0 auto;padding:0 28px 40px}
+.hero-heading h1{font-size:clamp(26px,8vw,60px);line-height:1.08;letter-spacing:-.035em;margin:0 0 16px;font-weight:700}
+.hero-subtitle{max-width:900px;margin:0 auto 18px;font-size:clamp(19px,3vw,30px);line-height:1.3;font-weight:550;color:var(--ink-2);text-wrap:balance}
+.hero-byline{font-size:16px;line-height:1.5;color:var(--ink-2);margin:0 0 24px}
+.hero-date{display:inline-block;white-space:nowrap}
+.hero-links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.hero-links a{display:inline-flex;align-items:center;min-height:44px;padding:8px 18px;border:0;border-radius:999px;background:var(--ink);color:#fff;font-size:14.5px;font-weight:600}
+.hero-links a:hover{background:var(--ink-2)}
+.hero-links a:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.lede{font-size:17.5px;line-height:1.62;color:var(--ink-2);margin:0;text-wrap:pretty}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:26px}
+.stat{background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+.stat b{display:block;font-size:26px;line-height:1.1;letter-spacing:-.02em;font-weight:700}
+.stat b.acc{color:var(--grpo)}
+.stat span{display:block;font-size:13px;color:var(--ink-2);line-height:1.4;margin-top:5px}
+.stat em{font-style:normal;color:var(--muted)}
+
+/* layout */
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:28px;align-self:start;margin-top:56px;font-size:13.5px}
+nav.toc a{display:block;border:0;color:var(--muted);padding:5px 0 5px 12px;border-left:2px solid var(--line)}
+nav.toc a:hover{color:var(--ink)}
+nav.toc a.on{color:var(--ink);border-left-color:var(--grpo)}
+main{max-width:var(--maxw);padding-bottom:80px}
+section{padding-top:56px}
+.kicker{font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.kicker i{font-style:normal;color:var(--grpo);margin-right:8px}
+h2{font-size:30px;line-height:1.2;letter-spacing:-.016em;margin:0 0 18px;font-weight:700}
+h3{font-size:20.5px;letter-spacing:-.01em;margin:36px 0 12px;font-weight:650}
+h4{font-size:17px;margin:28px 0 8px;font-weight:650;color:var(--ink)}
+.intro p{font-size:17.5px}
+
+/* figures */
+figure{margin:28px 0 30px}
+figure.wide{margin-left:-60px;margin-right:-60px}
+figure .frame{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;overflow:hidden}
+figure img{display:block;width:100%;height:auto}
+figcaption{font-size:14px;line-height:1.55;color:var(--ink-2);margin-top:10px;padding:0 4px}
+figcaption b{color:var(--ink)}
+
+/* tables */
+.tbl{overflow-x:auto;margin:20px 0 24px;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th{text-align:left;font-weight:600;color:var(--ink-2);background:var(--soft);font-size:13px;letter-spacing:.02em}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.hl td{background:#fff6ee}
+.note{font-size:13.5px;color:var(--muted);line-height:1.55;margin:-8px 0 22px}
+
+/* callouts */
+.formula{display:flex;align-items:center;gap:14px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:18px 0 22px;font-size:16px}
+.formula .tag{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.formula code{background:#fff;font-size:15.5px;padding:4px 9px}
+.tokens{display:grid;grid-template-columns:74px repeat(6,1fr);gap:4px;margin:20px 0 8px;font:13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
+.tokens .lab{font:600 12px/1 Inter,system-ui,sans-serif;color:var(--muted);display:flex;align-items:center;letter-spacing:.04em;text-transform:uppercase}
+.tokens .t{border-radius:7px;padding:9px 4px;text-align:center;border:1px solid var(--line)}
+.t.pad{background:#f1f3f7;color:var(--muted)} .t.w{background:var(--lav-t);color:#5b4a9a} .t.s{background:var(--amber-t);color:#9a6a1c}
+.t.c{background:var(--mint-t);color:#2f7552} .t.e{background:var(--rose-t);color:#a2523c}
+.tokens-cap{font-size:13px;color:var(--muted);margin-bottom:22px}
+
+/* source cards */
+.sources{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 10px}
+.src{border-radius:14px;padding:16px 16px 14px;border:1px solid var(--line);display:flex;flex-direction:column}
+.src .hrs{margin-top:auto}
+.src h5{font-size:14.5px;margin:0 0 6px;line-height:1.35}
+.src p{font-size:13.5px;line-height:1.5;color:var(--ink-2);margin:0 0 14px}
+.src .hrs{font-size:12.5px;color:var(--ink-2)}
+.src .hrs div{display:flex;justify-content:space-between;margin-top:6px}
+.src .hrs b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.src .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.9);margin-top:4px;overflow:hidden}
+.src .bar i{display:block;height:100%;border-radius:3px;background:var(--ink-2);opacity:.55}
+.s1{background:var(--blue-t)} .s2{background:var(--lav-t)} .s3{background:var(--amber-t)}
+.totals{display:flex;gap:28px;font-size:14px;color:var(--ink-2);margin:12px 2px 6px}
+.totals b{font-size:20px;color:var(--ink);margin-right:6px;font-variant-numeric:tabular-nums}
+
+/* stage chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 18px}
+.chip{font-size:12.5px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:4px 11px;color:var(--ink-2)}
+.chip b{color:var(--ink);font-weight:600}
+
+/* samples */
+.samples{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0 8px}
+.sample{border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;background:#fff;display:flex;flex-direction:column}
+.sample:first-child{grid-column:1/-1}
+.sample .hd{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.sample .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.sample .ic svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sample .num{font-size:11.5px;letter-spacing:.12em;color:var(--muted);font-weight:600}
+.sample h4{margin:0;font-size:16.5px}
+.sample p{font-size:14.5px;line-height:1.55;color:var(--ink-2);margin:0 0 12px}
+.sample .lf{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.sample .lf span{font-size:12px;border-radius:999px;padding:3px 10px;background:var(--soft);border:1px solid var(--line);color:var(--ink-2)}
+.player{margin-top:auto;display:flex;align-items:center;gap:12px;border-radius:12px;background:var(--soft);border:1px dashed #cdd5e1;padding:10px 12px}
+.player .pb{width:32px;height:32px;border-radius:50%;background:#dfe5ee;display:grid;place-items:center;flex:none}
+.player .pb svg{width:12px;height:12px;fill:#9aa6b8}
+.player .wave{flex:1;height:28px;display:flex;align-items:center;gap:2px}
+.player .wave i{flex:1;background:#d3dae5;border-radius:2px}
+.player .soon{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.player.ready{border-style:solid;border-color:var(--line)}
+.player.ready .pb{border:0;padding:0;cursor:pointer;transition:background .15s,transform .12s}
+.player.ready .pb:hover{background:#d3dae5;transform:scale(1.06)}
+.player.ready .pb:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.player.ready .pb svg{fill:#7a879a;transition:fill .15s}
+.player.ready .pb:hover svg{fill:var(--ink-2)}
+.player.ready .wave{cursor:pointer}
+.player.ready .wave i{background:#c9d1dd;transition:background .15s}
+.player.ready .wave i.on{background:var(--teal)}
+.player .tm{font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.player audio{display:none}
+.samples-note{font-size:13.5px;color:var(--muted)}
+
+/* charts */
+.card{border:1px solid var(--line);border-radius:16px;padding:20px 20px 14px;margin:20px 0 26px;background:#fff}
+.card .q{font-size:15px;color:var(--ink-2);margin:0 0 4px}
+.card .take{font-size:17px;font-weight:620;margin:0 0 14px;line-height:1.45}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);margin:2px 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:Inter,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.card details{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.card summary{font-size:13px;color:var(--teal);cursor:pointer;list-style:none}
+.card summary::-webkit-details-marker{display:none}
+.card summary::before{content:"▸ ";} .card details[open] summary::before{content:"▾ ";}
+.card .tbl{margin:10px 0 6px}
+.card .cap{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 2px}
+.pending-pill{font-size:11px;font-weight:600;letter-spacing:.05em;color:#8a6a2a;background:var(--amber-t);border:1px dashed #e2c48c;border-radius:999px;padding:1px 8px}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:12.5px;line-height:1.45;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .08s;z-index:10;max-width:260px}
+
+.resources{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+.resources a{border:1px solid var(--line);border-radius:999px;padding:5px 14px;font-size:14px;background:var(--soft)}
+.resources a:hover{border-color:var(--teal)}
+ol.refs{padding-left:1.6em;font-size:14.5px;line-height:1.55;color:var(--muted)}
+ol.refs li{margin:0 0 7px}
+pre.bib{font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px 18px;overflow-x:auto;margin:0 0 22px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;padding:26px 28px 40px;text-align:center}
+
+@media (max-width:1100px){
+  .wrap{grid-template-columns:1fr} nav.toc{display:none} main{margin:0 auto}
+  figure.wide{margin-left:0;margin-right:0}
+}
+@media (max-width:760px){
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))} .sources,.samples{grid-template-columns:1fr}
+  .tokens{grid-template-columns:58px repeat(6,1fr);font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div class="brand-bar">
+  <div class="brand-bar-in">
+    <a class="brand-mark" href="https://averalabs.com/" aria-label="AveraLabs website">
+      <img src="assets/averalabs-logo.png" alt="AveraLabs" width="348" height="83">
+    </a>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="hero-heading">
+    <h1>Awaken Full duplex</h1>
+    <p class="hero-subtitle">Efficient Full-Duplex Adaptation with Capability Retention</p>
+    <p class="hero-byline">Richard Yucheng He, Yihang Liu, Tairan Chen, Baodong Cao, Chen Xu <span class="hero-date">· <time datetime="2026-10-30">Oct 30, 2026</time></span></p>
+    <div class="hero-links">
+      <a href="https://github.com/avera-labs/AwakenFullDuplex">GitHub</a>
+      <a href="https://huggingface.co/openmartdev/awaken-full-duplex">Hugging Face</a>
+    </div>
+  </div>
+  <div class="hero-in">
+    <p class="lede">Full-duplex voice models can listen and speak at the same time, so they can acknowledge, interrupt, and hand over turns the way people do. Teaching this usually depends on natural conversational audio rich in backchannels. That audio is scarce, and without careful curation it can weaken a model’s reasoning and grounding. Awaken adapts half-duplex Fun-Audio-Chat for full-duplex conversation using only a small amount of dialogue data while retaining most of the base model’s benchmark performance.</p>
+    <div class="stats">
+      <div class="stat"><b class="acc">63%</b><span>backchannel pass rate <em>(SFT alone: 1%)</em></span></div>
+      <div class="stat"><b>3%</b><span>floor-take rate while the user is speaking</span></div>
+      <div class="stat"><b>61%</b><span>groundedness probes passed <em>(half-duplex base: 66%; open full-duplex: 14⁠–⁠35%)</em></span></div>
+      <div class="stat"><b>90%</b><span>spoken logic puzzles solved <em>(open full-duplex: 30–40%)</em></span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<nav class="toc" id="toc">
+  <a href="#overview" class="on">Overview</a>
+  <a href="#listen" class="">Listen</a>
+  <a href="#foundation">Foundation</a>
+  <a href="#structure">Streaming structure</a>
+  <a href="#data">Composing data</a>
+  <a href="#recipe">Training recipe</a>
+  <a href="#grpo">GRPO</a>
+  <a href="#eval">Evaluation</a>
+  <a href="#related">Related work</a>
+  <a href="#conclusion">Conclusion</a>
+  <a href="#references">References</a>
+  <a href="#citation">Citation</a>
+  <a href="#license">License</a>
+</nav>
+
+<main>
+
+<section id="overview" class="intro">
+<p>Most voice assistants alternate between listening and speaking. A full-duplex model does both continuously. It can say “mm-hm” while the user talks, stop when it is interrupted, and respond without waiting for an explicit end of turn.</p>
+<p>Learning this behavior requires conversations that actually contain it, with overlapping speech, timely backchannels, and natural interruptions. High-quality audio of this kind is hard to obtain. Assistant-style dialogue rarely contains it, and the natural conversations that do contain it are limited and uneven in quality.</p>
+<p>Using more of the natural conversations is not a free fix. Casual human dialogue also brings repetitions, incomplete thoughts, and content that depends on unspoken context. In our experiments, adding it without careful curation weakened the accuracy and relevance of the assistant’s responses.</p>
+<p>Awaken teaches full-duplex behavior without relying on large amounts of this data. Starting from the half-duplex <a href="https://huggingface.co/FunAudioLLM/Fun-Audio-Chat-8B">Fun-Audio-Chat checkpoint</a>, we compose training conversations with explicit timing, overlap, and interruptions, and fine-tune in stages. A targeted <a href="https://arxiv.org/abs/2402.03300">GRPO</a> stage then teaches backchannels from the model’s own samples, raising the backchannel pass rate from 1% to 63% with a 3% floor-take rate.</p>
+<p>Through all of this, the model keeps what it started with. Awaken passes 61% of groundedness probes, near its half-duplex base (66%) and well above open full-duplex models (14–35%). It also solves 90% of spoken logic puzzles, compared with 30–40% for open full-duplex models.</p>
+</section>
+
+<!-- ============================ SAMPLES ============================ -->
+<section id="listen">
+<div class="kicker"><i>▶</i>Samples</div>
+<h2>Listen to Awaken</h2>
+<p>Five conversations, each highlighting a different side of full-duplex interaction. In every sample a caller talks with Awaken in real time; the caller is on the left channel and Awaken on the right.</p>
+
+<div class="samples" id="samples"></div>
+</section>
+
+<!-- ============================ FOUNDATION ============================ -->
+<section id="foundation">
+<div class="kicker"><i>01</i>Foundation</div>
+<h2>Building on Fun-Audio-Chat</h2>
+<p>Fun-Audio-Chat combines speech understanding and generation with a shared language backbone. Its Dual-Resolution Speech Representations let the backbone operate at 5 Hz while a speech refinement head generates tokens at 25 Hz. Each backbone step therefore corresponds to 200 ms and five speech tokens. This provides an efficient foundation for jointly generating text and speech. The original architecture, capabilities, and demonstrations are described on the <a href="https://qwenaudio.github.io/funaudiochat/">Fun-Audio-Chat project website</a>.</p>
+</section>
+
+<!-- ============================ STRUCTURE ============================ -->
+<section id="structure">
+<div class="kicker"><i>02</i>Architecture</div>
+<h2>Awaken’s streaming structure</h2>
+<p>Awaken takes a continuous user-audio stream and generates aligned text and speech. A causal audio encoder converts incoming waveform segments into features. At each 200 ms step, these features are fused with the assistant’s text and speech history and passed into a shared language backbone. The backbone predicts the next text/control token at 5 Hz and provides hidden states to a speech refinement head, which produces five speech codes per step at 25 Hz, conditioned on the current text embedding and the preceding codes. A speech decoder converts those codes into the output waveform, and the generated text and codes become history for the next step. The system prompt and streaming role prefix are prefilled once into the backbone’s attention cache. Incoming audio continues to be processed while the assistant speaks.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/structure.svg" alt="Awaken architecture showing three input streams, fusion, backbone, text and audio outputs, and next-step feedback."></div>
+  <figcaption><b>Figure 1.</b> Awaken’s streaming model tower across three representative steps. User features, text embeddings, and audio-token embeddings enter the shared fusion layer and transformer backbone; hidden states produce the next text token and condition the audio decoder, whose five codes feed the <a href="https://github.com/FunAudioLLM/CosyVoice">CosyVoice</a> detokenizer above. The paths on the right show text/audio feedback into the next input group. Prefix prefill and special-token handling are condensed.</figcaption>
+</figure>
+
+<h3>Adapting the incoming-audio encoder</h3>
+<p>The starting audio encoder uses bidirectional attention within its input windows. Streaming requires features to advance as audio arrives, so we replace that attention with causal, windowed attention: each encoder position can attend to the current position and a bounded history, without attending to future encoder positions.</p>
+<p>We adapt the encoder through feature distillation. A frozen copy of the original encoder serves as the teacher, and a student initialized from its weights learns with the causal mask. Both receive the same audio; the student matches the teacher’s features using mean-squared-error loss. The adaptation setup samples real and synthesized speech at a 70:30 ratio, with noise, reverberation, and loudness augmentation applied consistently to teacher and student inputs. The attention window covers 100 preceding encoder positions, approximately two seconds per layer. This adapted encoder initializes supervised training; during streaming inference, per-layer attention caches carry its recent history forward.</p>
+
+<h3>Advancing text and audio together</h3>
+<p>The sequence begins with a system prompt and a streaming role prefix, followed by a start marker. These are prefilling context, rather than repeated tokens at every time step. After that prefix, incoming user features, assistant text/control tokens, and assistant speech-code groups advance on the shared clock.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/architecture.svg" alt="Awaken sequence layout showing the system and role prefix, incoming user features, text/control tokens, and five speech codes per frame."></div>
+  <figcaption><b>Figure 2.</b> A recorded backchannel excerpt from the alignment viewer, with user and assistant waveform envelopes, text/control tokens, and five stacked audio-code slots on the same time axis. Each column spans 200 ms; its five audio slots advance at 25 Hz. The system/role prefix above the excerpt is schematic. Columns show aligned entries in the autoregressive loop; predictions become subsequent entries.</figcaption>
+</figure>
+
+<p>The text/control stream distinguishes listening, producing words, and finishing speech. <strong>PAD</strong> represents listening with the speech head inactive. A word token starts a speech segment, whose audio stream is initialized with <strong>BOS</strong>. Further word tokens accompany the generated speech. Once the words are complete, <strong>SIL</strong> allows the speech stream to finish voicing. Returning to <strong>PAD</strong> releases the segment, paired with <strong>EOS</strong> in the audio stream; subsequent idle audio groups use audio <strong>PAD</strong>. Text PAD and audio PAD belong to different token vocabularies.</p>
+
+<div class="tokens" aria-label="Schematic of text and audio token states">
+  <div class="lab">Text</div><div class="t pad">PAD</div><div class="t w">word</div><div class="t w">word</div><div class="t s">SIL</div><div class="t pad">PAD</div><div class="t pad">PAD</div>
+  <div class="lab">Audio</div><div class="t pad">PAD</div><div class="t c">BOS + codes</div><div class="t c">codes</div><div class="t c">codes</div><div class="t e">EOS</div><div class="t pad">PAD</div>
+</div>
+<div class="tokens-cap">Schematic state sequence: listening → words → voicing tail → release → listening.</div>
+
+<p>The diagram shows the recorded text-token sequence “oh no.” during ongoing user speech. It does not imply that every word occupies exactly one frame or that a response has a fixed duration. Generated text and speech history feed subsequent steps, alongside newly arriving user audio. A user can therefore continue speaking through a brief acknowledgment or interrupt an ongoing response without waiting for a separate listening phase.</p>
+<p>Relative to the Fun-Audio-Chat foundation, which also offers a full-duplex mode, the changes described here are the causally adapted incoming-audio encoder and this continuous streaming sequence with explicit listening, voicing-tail, and release states.</p>
+</section>
+
+<!-- ============================ DATA ============================ -->
+<section id="data">
+<div class="kicker"><i>03</i>Data</div>
+<h2>Composing data for continuous interaction</h2>
+<p>The streaming structure gives the model a way to represent continuous conversation. The training data must then demonstrate how to use that structure.</p>
+<p>We organize our data by the contribution each source makes to the training mixture. The selected training pool contains approximately <strong>8,454 conversation hours</strong> and <strong>4,337 agent-audio hours</strong>, distributed across the three source categories below. Conversation hours measure the full shared timeline of each composed record, including pauses and overlap. Agent hours measure the annotated assistant-audio segments after interruption cutoffs, including pauses within those segments and excluding listening-only spans.</p>
+
+<div class="sources">
+  <div class="src s1"><h5>Assistant-oriented dialogues</h5><p>Relevant responses, contextual continuity, and assistant-style conversational content</p>
+    <div class="hrs"><div><span>Conversation h</span><b>3,788.3 · 44.8%</b></div><div class="bar"><i style="width:44.8%"></i></div>
+    <div><span>Agent h</span><b>2,200.0 · 50.7%</b></div><div class="bar"><i style="width:50.7%"></i></div></div></div>
+  <div class="src s2"><h5>Podcast-style and conversational dialogues</h5><p>Longer exchanges, expressive delivery, and a range of speaking styles</p>
+    <div class="hrs"><div><span>Conversation h</span><b>2,751.0 · 32.5%</b></div><div class="bar"><i style="width:32.5%"></i></div>
+    <div><span>Agent h</span><b>1,343.6 · 31.0%</b></div><div class="bar"><i style="width:31%"></i></div></div></div>
+  <div class="src s3"><h5>Synthesized and annotated full-duplex conversations</h5><p>Explicit examples of overlapping interaction and brief listener responses, including initial backchannel behavior</p>
+    <div class="hrs"><div><span>Conversation h</span><b>1,914.3 · 22.6%</b></div><div class="bar"><i style="width:22.6%"></i></div>
+    <div><span>Agent h</span><b>793.0 · 18.3%</b></div><div class="bar"><i style="width:18.3%"></i></div></div></div>
+</div>
+<div class="totals"><span><b>8,453.7</b>conversation hours</span><span><b>4,336.5</b>agent hours</span></div>
+<p class="note" style="margin-top:6px">Shares are computed within each hours column. These totals describe the selected composed training pool before training-window truncation and replay; validation is excluded, and composed variants count as separate records. They are not counts of unique original recordings or voiced-only speech. Values are rounded.</p>
+
+<p>Both SFT stages mix all three categories, with interaction-data replay in the second stage.</p>
+<p>These categories describe the source material. Turn-taking and interruption behavior are taught primarily through how we <strong>compose utterances into conversations</strong>. A dialogue's timing is an explicit part of the training example.</p>
+
+<h3>Selecting conversational content</h3>
+<p>Podcast-style and conversational dialogues offer expressive delivery and natural timing, but not every exchange provides a useful target for an assistant. In our experiments, an emphasis on loosely structured casual conversation could weaken response accuracy and relevance, with more unsupported assertions and occasional incoherent replies. We therefore apply a content filter to this part of the corpus, favoring exchanges with substantive information, explanations, explicit reasoning, or problem-solving.</p>
+<p>The filter scores cues in scene descriptions, speaker descriptions, and the opening transcript. It favors informational and reasoning content while reducing the share of exchanges dominated by small talk, banter, or context-dependent storytelling. This is a heuristic selection signal, rather than a factual-correctness check. It helps us retain conversational delivery while choosing more useful response targets.</p>
+
+<h3>From utterances to timed conversations</h3>
+<p>We place user and assistant utterances on a shared timeline, preserving the correspondence between the incoming waveform, assistant text, and assistant speech tokens. Composition recipes specify the spacing between utterances, the timing of speaker changes, and the response to a user interruption.</p>
+<p>For a speaker change, the <strong>floor-transfer offset (FTO)</strong> is the next speaker’s onset minus the previous speaker’s voice end:</p>
+<div class="formula"><span class="tag">FTO</span><code>FTO = next onset − previous voice end</code></div>
+<p>Positive FTO creates a gap; negative FTO creates overlap. We sample it over <strong>−0.6 to +1.0 seconds</strong>, using a truncated split-normal distribution centered at zero: 60% of draws select the positive side and 40% the negative side, with scale parameters 0.3715 s and 0.25 s, respectively. When the assistant utterance involved is at most two seconds long, a negative draw is resampled from the positive side. Consecutive utterances by the same speaker instead receive a uniform <strong>0.3–0.6 s</strong> gap after the previous channel segment ends.</p>
+<p>For a user interruption, let <code>t_a</code> be the assistant utterance’s start and <code>D</code> its original voice duration before interruption. We sample an <strong>interruption position</strong> <code>p</code> uniformly over <strong>0.4–0.8</strong> of that duration, placing the user’s onset at <code>t_a + pD</code>. Thus, the interruption begins 40–80% through the original assistant utterance, rather than at a fixed number of seconds.</p>
+<p>The <strong>interruption reaction delay</strong> <code>δ</code> is the designed interval from that user onset to the assistant’s stop: <code>assistant stop = user onset + δ</code>. Its proposal distribution assigns <strong>20% probability to exactly 0 s</strong>; the remaining 80% is sampled from a normal distribution with location 0.4 s and scale 0.5 s, truncated to <strong>(0, 2] s</strong>.</p>
+<p>We accept an interruption placement only when <code>pD + δ ≤ D − 2 s</code>, so it cuts off at least two seconds of the original utterance. Position and delay are resampled jointly up to 32 times; if no placement satisfies the constraint, that candidate uses ordinary turn-taking. Consequently, accepted positions and delays are conditioned on utterance length and this constraint: the final examples need not retain the proposal’s uniform position distribution or exact 20% zero-delay share. Placements are represented on the shared 200 ms frame grid, with same-channel overlap guards. The interrupted assistant target ends at the composed stop.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/composition.svg" alt="Illustrative composition timelines for a turn handoff, a user interruption, and an assistant backchannel during user speech."></div>
+  <figcaption><b>Figure 3.</b> Illustrative examples of the composed interaction patterns. Positions are schematic composition targets, not measured latencies. Ranges label the proposal distributions; accepted interruptions also satisfy the remaining-duration constraint.</figcaption>
+</figure>
+
+<p>Each composed record stores its event placements and timing choices. The data loader reconstructs the conversation from this record, making its timing reproducible. We keep related variants together when constructing train and validation splits.</p>
+
+<h3>Giving backchannels an initial foothold</h3>
+<p>A backchannel is a brief listener response, such as “yeah” or “mm-hmm,” that can occur while the user continues speaking. It should acknowledge the user without becoming a competing substantive turn.</p>
+<p>We include synthesized conversations containing this behavior in the supervised mixture. They give the model initial examples of when a brief response can occur, how it fits into overlapping speech, and how the assistant can return to listening before giving a substantive reply.</p>
+<p>These examples are part of the SFT mixture and prepare a starting policy for the later reinforcement learning stage, where conversational windows provide contexts in which the policy samples and improves its own behavior.</p>
+</section>
+
+<!-- ============================ RECIPE ============================ -->
+<section id="recipe">
+<div class="kicker"><i>04</i>Training</div>
+<h2>The training recipe</h2>
+<p>Our selected recipe combines two supervised stages with a subsequent backchannel-focused GRPO stage.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/training.svg" alt="Training overview from Fun-Audio-Chat through streaming adaptation, two SFT stages, and backchannel-focused GRPO."></div>
+  <figcaption><b>Figure 4.</b> The selected training path. Before the second SFT stage, compatible backbone and speech-head weights are blended equally with the base checkpoint; the adapted audio encoder is retained.</figcaption>
+</figure>
+
+<h3>Stage 1: learning the conversation representation</h3>
+<div class="chips"><span class="chip"><b>64,000</b> records</span><span class="chip">batch <b>64</b></span><span class="chip"><b>1,000</b> steps</span><span class="chip">windows ≤ <b>180 s</b></span></div>
+<p>We begin supervised training from Fun-Audio-Chat with the adapted incoming-audio encoder. The model learns the new streaming input pattern and the aligned text and speech targets in composed conversations.</p>
+<p>The objective covers both response content and conversational transitions. Long listening spans occupy many positions, while the decisions to start, stop producing words, and release speech are relatively sparse. We therefore weight the output classes and explicitly supervise the important transition positions, allowing those decisions to contribute meaningfully to training.</p>
+<p>In the selected run, stage 1 uses 64,000 composed records and an effective batch size of 64 for 1,000 optimizer steps. Training windows contain up to 900 frames, or 180 seconds. The initial learning rates are 1e-5 for the language backbone, 6e-5 for the speech refinement head, and 1e-5 for the incoming-audio encoder, with cosine decay.</p>
+
+<h3>Stage 2: continued adaptation with interaction-data replay</h3>
+<div class="chips"><span class="chip"><b>100,132</b> records</span><span class="chip"><b>6,780</b> replayed</span><span class="chip">batch <b>64</b></span><span class="chip">50/50 blend with base</span></div>
+<p>Before stage 2, we blend the compatible language-backbone and speech-head parameters equally between the stage-1 model and the base checkpoint. We retain the stage-1 audio encoder. This initialization is part of our selected approach to balancing the pretrained capabilities with continued conversational adaptation.</p>
+<p>Stage 2 trains on the remaining composed records and replays the designated interaction-data sources from stage 1. This provides further conversational coverage while continuing to expose the model to the explicit interaction examples.</p>
+<p>The stage-2 mixture contains 100,132 records, including 6,780 replayed records. We use the same 180-second window limit and effective batch size of 64. Learning rates decay from 5e-6 to 1e-6 for the language backbone, 5e-5 to 1e-5 for the speech head, and 1e-6 to 1e-7 for the incoming-audio encoder.</p>
+<p>Both supervised stages use FP32 model weights with BF16 autocast. We track text, speech, and transition metrics alongside conversational and capability evaluations.</p>
+</section>
+
+<!-- ============================ GRPO ============================ -->
+<section id="grpo">
+<div class="kicker"><i>05</i>Reinforcement learning</div>
+<h2>GRPO: developing brief listener responses</h2>
+<p>The SFT checkpoint establishes the conversational foundation, but its measured backchannel frequency remains low. We use <a href="https://arxiv.org/abs/2402.03300">Group Relative Policy Optimization (GRPO)</a> to develop this behavior through sampled interactions.</p>
+
+<h3>Learning interaction decisions without unnecessarily changing knowledge</h3>
+<p>We want to improve when the assistant speaks and yields while preserving the knowledge and response capabilities developed through pretraining and supervised fine-tuning. Our recipe combines action-space projection with targeted token-space updates. Each reward signal is assigned only to the frames directly responsible for the behavior being evaluated. This focuses the update on the relevant decisions and limits changes to the model’s output distribution elsewhere.</p>
+<p>In ordinary <strong>token space</strong>, the policy update uses the probability of the exact sampled vocabulary token—for example, “yeah.” A timing reward applied to that probability can also reinforce the particular wording, even when the scorer has not established that the words are correct. In the <strong>projected action space</strong>, we instead add together token probabilities according to the interaction decision they represent:</p>
+
+<div class="tbl"><table>
+<tbody><tr><th>Token group</th><th>Meaning</th></tr>
+<tr><td><span class="t w" style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:600">W</span></td><td>Content tokens, including punctuation</td></tr>
+<tr><td><span class="t s" style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:600">S</span></td><td>SIL: words have stopped, but speech may still be finishing</td></tr>
+<tr><td><span class="t pad" style="display:inline-block;padding:2px 10px;border-radius:6px;font-weight:600">P</span></td><td>PAD: listening or speech release</td></tr>
+</tbody></table></div>
+
+<p>For speech activity, we compare <strong>W + S versus P</strong>: activate or maintain the speech stream, versus listen or release. For text production, we compare <strong>W versus S + P</strong>: produce another content token, versus stop producing words. The model still generates ordinary text/control tokens; projection changes the probabilities used for credit assignment, without adding a separate action head.</p>
+<p>Projection alone leaves room for shortcuts. A model rewarded for brevity can learn to stop an intended sentence after a few words, satisfying a length budget while leaving an incomplete utterance. We therefore also retain <strong>token-space credit for backchannel attempts</strong>, alongside explicit checks at the word-ending and speech-release positions. The goal is a brief, complete listener response, rather than a longer reply that has simply been cut short. These checks remain behavioral heuristics, not a semantic correctness guarantee.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/grpo.svg" alt="Illustrative acknowledgment and substantive reply, showing the specific start, text-ending, and release decisions that receive GRPO credit."></div>
+  <figcaption><b>Figure 5.</b> Credit follows the interaction: an acknowledgment receives timing credit at its start, word ending, and speech release, plus a form score on its content tokens. For substantive replies, onset and length rewards target interaction decisions. The examples are schematic; widths do not represent measured durations.</figcaption>
+</figure>
+
+<h3>Backchannel contexts: when to acknowledge, and where to assign credit</h3>
+<p>We construct backchannel contexts from conversational windows in which the user holds the floor for at least five seconds. The model receives the preceding context and generates while the recorded user audio continues. The selected setup mixes opening-turn contexts with contexts later in a conversation, targeting half of the BC draws from each. User-span duration buckets provide coverage across shorter and longer speaking spans.</p>
+<p>The scorer identifies assistant attempts within the user-speaking span and evaluates their timing, spacing, brevity, text ending, and release. In the selected run, a backchannel is limited to <strong>four words and less than two seconds of speech</strong>. Word count is distinct from the number of tokenizer tokens. Completion checks use sentence-ending punctuation and the transition through the voicing tail; an unfinished fragment or a direct word-to-release cutoff does not receive the same credit as a completed acknowledgment.</p>
+<p>We apply each score at the position responsible for the behavior:</p>
+
+<div class="tbl"><table>
+<tbody><tr><th>Backchannel signal</th><th>What is scored</th><th>Where credit is applied</th></tr>
+<tr><td><strong>Onset and spacing</strong></td><td>First-attempt timing and the gap after a previous attempt; rapid repeated acknowledgments are discouraged</td><td>The onset frame, using the speech-activity projection; if no attempt occurs, the eligible listening PAD frames receive the missing-attempt signal</td></tr>
+<tr><td><strong>Word completion</strong></td><td>Whether a short attempt finishes its text rather than ending as a fragment</td><td>The first non-content token after its last content token, using the text-production projection</td></tr>
+<tr><td><strong>Speech release</strong></td><td>Whether the assistant returns to listening promptly after a completed acknowledgment</td><td>The release PAD frame, using the speech-activity projection; direct truncation is penalized</td></tr>
+<tr><td><strong>Brief response form</strong></td><td>The attempt’s word count and eligibility as a valid backchannel</td><td>Its content-token positions, including the onset token, using the exact-token objective</td></tr>
+</tbody></table></div>
+
+<p>For token-space credit, shorter valid responses receive stronger scores. Longer attempts lose that credit, and sufficiently long attempts receive negative scores. Invalid short attempts have their positive text credit withheld. A moving expression-frequency rule also removes token-space credit from overused backchannel forms, reducing the incentive to repeat a single acknowledgment everywhere.</p>
+<p>Each event is compared across the group of sampled continuations, or across pooled attempts for the corresponding backchannel signal. Its group-relative advantage is assigned only to the credited positions above. We do not distribute one undifferentiated backchannel score across every token in the continuation. Where a BC context includes the subsequent user-turn ending, we also evaluate the reply that follows.</p>
+
+<h3>Reply contexts: retaining substantive responses</h3>
+<p>Backchannel training must not teach the assistant to treat every opportunity to speak as a brief acknowledgment. We therefore include <strong>reply contexts</strong> where a substantive user turn ends and a longer assistant response is appropriate.</p>
+<p>We select user-turn endings with a reference assistant response of more than six words nearby, excluding short user backchannels and cases where another substantive user turn immediately begins. The rollout starts from an assistant-idle position before the user finishes, with the conversation history available. It continues through the reply, giving the policy an opportunity to answer rather than only acknowledge. Reply-context rewards are applied <strong>only in projected action space</strong>.</p>
+<p>Reply scoring focuses on two decisions:</p>
+
+<div class="tbl"><table>
+<tbody><tr><th>Reply signal</th><th>What is scored</th><th>Where credit is applied</th></tr>
+<tr><td><strong>Onset</strong></td><td>Whether the reply begins within the configured −1 to +1 s region around user voice end</td><td>Early content frames are penalized for premature onset; late or missing responses receive a signal on the intervening idle PAD frames, using the speech-activity projection</td></tr>
+<tr><td><strong>Response length</strong></td><td>Generated word count relative to the reference reply, discouraging replacement of a substantive response with a short BC</td><td>The first non-content token after the reply’s words, using the text-production projection—not the body words</td></tr>
+</tbody></table></div>
+
+<p>The length score is negative at or below 75% of the reference word count, rises to its maximum at 90%, and stays flat above that. Replies still open at the rollout boundary are excluded from that length comparison. If the user begins a new substantive turn, credit is masked from that point onward. Reference length is a behavioral proxy: the scorer does not verify the answer’s meaning, so we continue to assess accuracy, groundedness, and knowledge separately.</p>
+
+<h3>Frame-level examples of credit assignment</h3>
+<p>The aligned examples below make the two reward spaces explicit. For the acknowledgment “Right.”, the onset frame receives both a projected speech-activity advantage, based on the combined probability of speaking, and a separate exact-token form advantage, based on the probability of the sampled word. For a reply that stops too short, the length signal lands on the first non-content frame and changes the projected stop-versus-continue decision there, rather than touching the preceding words.</p>
+
+<figure class="wide">
+  <div class="frame"><img src="assets/grpo_credit.svg" alt="Two frame-aligned examples showing text/control tokens, W/S/P classes, projected action-space credit, and exact-token credit."></div>
+  <figcaption><b>Figure 6.</b> Each reward is converted to a group-relative advantage and assigned to its responsible frames. A1–A6 identify separate event advantages, whose signs depend on the sampled group; they are not raw reward values. The examples illustrate credit masks, not recorded outputs or a complete set of training signals.</figcaption>
+</figure>
+
+<h3>Selected optimization settings</h3>
+<p>For each context, we sample <strong>16 continuations</strong> and use clipped group-relative updates. Both projected decisions and generated words are regularized toward the fixed SFT reference. We use weaker constraints where new backchannel behavior is being learned and stronger constraints on the surrounding responses.</p>
+
+<div class="tbl"><table>
+<tbody><tr><th>Setting</th><th class="n">Selected value</th></tr>
+<tr><td>Learning rate</td><td class="n">5e-7</td></tr>
+<tr><td>Word-token KL weight: BC-attempt words</td><td class="n">0.06</td></tr>
+<tr><td>Word-token KL weight: other generated words</td><td class="n">0.3</td></tr>
+<tr><td>W/S/P KL weight: BC-eligible span</td><td class="n">0.03</td></tr>
+<tr><td>W/S/P KL weight: outside that span</td><td class="n">0.1</td></tr>
+</tbody></table></div>
+
+<p>The class and word regularizers use sampled KL estimators. The BC word weight applies to identified attempt words; the BC action weight applies to the eligible span, including listening positions where the model decides whether to respond.</p>
+<p>We update the top six language-backbone blocks, the final normalization, and the text output head, using FP32 optimizer master weights. Text embeddings, lower backbone blocks, incoming-audio encoder, fusion component, and speech head remain frozen. Audio is generated during rollout, but audio-code probabilities do not receive a direct GRPO policy-gradient loss. The policy at round 160 is the candidate discussed below.</p>
+</section>
+
+<!-- ============================ EVAL ============================ -->
+<section id="eval">
+<div class="kicker"><i>06</i>Evaluation</div>
+<h2>Evaluation: listening, following, and knowing</h2>
+<p>A full-duplex model can learn to react while the user speaks and lose the thread, or keep its knowledge and never react. We measure three things side by side: <strong>listener behavior</strong>, <strong>following the conversation</strong>, and <strong>knowledge and reasoning</strong>.</p>
+<p>We compare against our half-duplex starting point <a href="https://huggingface.co/FunAudioLLM/Fun-Audio-Chat-8B">Fun-Audio-Chat-8B</a>, its official full-duplex variant <a href="https://arxiv.org/abs/2512.20156">Fun-Audio-Chat-Duplex-8B</a> (reported scores only), the open full-duplex models <a href="https://github.com/kyutai-labs/moshi">Moshi</a>, <a href="https://github.com/VITA-MLLM/Freeze-Omni">Freeze-Omni</a>, and <a href="https://research.nvidia.com/labs/adlr/personaplex/">PersonaPlex</a>, and the hosted <a href="https://openai.com/index/introducing-gpt-realtime/">GPT-Realtime</a>. External results come from the public <a href="https://avera-labs.github.io/InteractionBench/">InteractionBench</a> results and the <a href="https://arxiv.org/html/2512.20156v3">Fun-Audio-Chat technical report</a>; we run Awaken and Fun-Audio-Chat-8B ourselves on the same items and pass rules.</p>
+
+<div class="legend" aria-hidden="true">
+  <span><i style="background:var(--grpo)"></i>Awaken GRPO</span>
+  <span><i style="background:var(--sft)"></i>Awaken SFT</span>
+  <span><i style="background:var(--ext)"></i>Other systems</span>
+  <span><i style="background:repeating-linear-gradient(135deg,var(--ext) 0 2px,#fff 2px 4px);border:1px solid var(--ext-d)"></i>Fun-Audio-Chat-8B (half-duplex start)</span>
+</div>
+
+<h3>Listener behavior: backchannels</h3>
+<div class="card">
+  <p class="q">A user tells a story with natural pauses; an item passes when the assistant backchannels at least once and never takes the floor.</p>
+  <p class="take">SFT alone yields a silent listener; GRPO makes Awaken backchannel in most items, close to the dedicated full-duplex models, while taking the floor far less often.</p>
+  <div class="chart" id="ch-bc"><svg viewBox="0 0 680 360" role="img"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fff"></rect><rect width="2.2" height="5" fill="#b9c3d2"></rect></pattern><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#e0702a" stroke-width="1.4"></path></marker></defs><text x="60" y="34" font-size="11.5" fill="#3f8a64" font-weight="600">↖ better: more backchannels, fewer floor-takes</text><line x1="52" x2="656" y1="314" y2="314" stroke="#e3e8f0"></line><text x="44" y="318" text-anchor="end" font-size="11.5" fill="#7a879a">0%</text><line x1="52" x2="656" y1="240" y2="240" stroke="#e3e8f0"></line><text x="44" y="244" text-anchor="end" font-size="11.5" fill="#7a879a">25%</text><line x1="52" x2="656" y1="166" y2="166" stroke="#e3e8f0"></line><text x="44" y="170" text-anchor="end" font-size="11.5" fill="#7a879a">50%</text><line x1="52" x2="656" y1="92" y2="92" stroke="#e3e8f0"></line><text x="44" y="96" text-anchor="end" font-size="11.5" fill="#7a879a">75%</text><line x1="52" x2="656" y1="18" y2="18" stroke="#e3e8f0"></line><text x="44" y="22" text-anchor="end" font-size="11.5" fill="#7a879a">100%</text><text x="52" y="332" text-anchor="middle" font-size="11.5" fill="#7a879a">0%</text><text x="203" y="332" text-anchor="middle" font-size="11.5" fill="#7a879a">10%</text><text x="354" y="332" text-anchor="middle" font-size="11.5" fill="#7a879a">20%</text><text x="505" y="332" text-anchor="middle" font-size="11.5" fill="#7a879a">30%</text><text x="656" y="332" text-anchor="middle" font-size="11.5" fill="#7a879a">40%</text><text x="354" y="354" text-anchor="middle" font-size="12.5" fill="#4a5a70">Floor-take rate (lower is better)</text><text transform="translate(13 166) rotate(-90)" text-anchor="middle" font-size="12.5" fill="#4a5a70">Backchannel pass rate →</text><path d="M140.6 302.04 Q 44.45 225.2 96.3 137.51999999999998" fill="none" stroke="#e0702a" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#arr)"></path><g style="cursor: default;"><circle cx="127.5" cy="284.40000000000003" r="14" fill="transparent"></circle><circle cx="127.5" cy="284.40000000000003" r="6.5" fill="var(--ext)" stroke="#fff" stroke-width="2"></circle><text x="137.5" y="288.40000000000003" font-size="12.5" fill="#1f2a3b" font-weight="400" text-anchor="start">GPT-Realtime</text></g><g style="cursor: default;"><circle cx="384.20000000000005" cy="83.11999999999999" r="14" fill="transparent"></circle><circle cx="384.20000000000005" cy="83.11999999999999" r="6.5" fill="var(--ext)" stroke="#fff" stroke-width="2"></circle><text x="394.20000000000005" y="87.11999999999999" font-size="12.5" fill="#1f2a3b" font-weight="400" text-anchor="start">Moshi</text></g><g style="cursor: default;"><circle cx="640.9" cy="314" r="14" fill="transparent"></circle><circle cx="640.9" cy="314" r="6.5" fill="var(--ext)" stroke="#fff" stroke-width="2"></circle><text x="630.9" y="304" font-size="12.5" fill="#1f2a3b" font-weight="400" text-anchor="end">Freeze-Omni</text></g><g style="cursor: default;"><circle cx="218.10000000000002" cy="68.32000000000002" r="14" fill="transparent"></circle><circle cx="218.10000000000002" cy="68.32000000000002" r="6.5" fill="var(--ext)" stroke="#fff" stroke-width="2"></circle><text x="228.10000000000002" y="72.32000000000002" font-size="12.5" fill="#1f2a3b" font-weight="400" text-anchor="start">PersonaPlex</text></g><g style="cursor: default;"><circle cx="142.6" cy="311.04" r="14" fill="transparent"></circle><circle cx="142.6" cy="311.04" r="6.5" fill="var(--sft)" stroke="#fff" stroke-width="2"></circle><text x="152.6" y="315.04" font-size="12.5" fill="#1f2a3b" font-weight="600" text-anchor="start">Awaken SFT</text></g><g style="cursor: default;"><circle cx="97.3" cy="127.52" r="14" fill="transparent"></circle><circle cx="97.3" cy="127.52" r="7.5" fill="var(--grpo)" stroke="#fff" stroke-width="2"></circle><text x="107.3" y="131.51999999999998" font-size="12.5" fill="#1f2a3b" font-weight="700" text-anchor="start">Awaken GRPO</text></g></svg></div>
+  <p class="cap">Awaken: the benchmark’s 30 items × 3 sampling seeds, scored with the benchmark’s pass rule. Fun-Audio-Chat-8B (half-duplex): n/a, since a half-duplex model cannot speak while the user is speaking.</p>
+  <details><summary>Show table</summary><div class="tbl"><table>
+    <tbody><tr><th>System</th><th class="n">Backchannel pass rate</th><th class="n">Floor-take rate</th></tr>
+    <tr><td>GPT-Realtime</td><td class="n">10%</td><td class="n">5%</td></tr>
+    <tr><td>Moshi</td><td class="n">78%</td><td class="n">22%</td></tr>
+    <tr><td>Freeze-Omni</td><td class="n">0%</td><td class="n">39%</td></tr>
+    <tr><td>PersonaPlex</td><td class="n">83%</td><td class="n">11%</td></tr>
+    <tr><td>Fun-Audio-Chat-8B (half-duplex)</td><td class="n">n/a</td><td class="n">n/a</td></tr>
+    <tr><td>Awaken SFT</td><td class="n">1%</td><td class="n">6%</td></tr>
+    <tr class="hl"><td><strong>Awaken GRPO</strong></td><td class="n"><strong>63%</strong></td><td class="n"><strong>3%</strong></td></tr>
+  </tbody></table></div></details>
+</div>
+
+<h3>Following the conversation: groundedness</h3>
+<div class="card">
+  <p class="q">Ten conversations of 22–24 turns build up state, such as a grocery list; 52 probes then test recall, updates, unknown information, constraints, false premises, and nonsense questions.</p>
+  <p class="take">Open full-duplex models pass only 14–35% of probes; Awaken stays close to its half-duplex starting point, and GRPO leaves it nearly unchanged.</p>
+  <div class="chart" id="ch-ground"><svg viewBox="0 0 680 262" role="img"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fff"></rect><rect width="2.2" height="5" fill="#b9c3d2"></rect></pattern></defs><rect x="281.48" y="6" width="59.21999999999997" height="228" fill="#f4f6fa"></rect><text x="311.09000000000003" y="248" text-anchor="middle" font-size="11" fill="#7a879a">open full-duplex models</text><line x1="242" x2="242" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray=""></line><text x="242" y="262" text-anchor="middle" font-size="11" fill="#7a879a">0%</text><line x1="312.5" x2="312.5" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="312.5" y="262" text-anchor="middle" font-size="11" fill="#7a879a">25%</text><line x1="383" x2="383" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="383" y="262" text-anchor="middle" font-size="11" fill="#7a879a">50%</text><line x1="453.5" x2="453.5" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="453.5" y="262" text-anchor="middle" font-size="11" fill="#7a879a">75%</text><line x1="524" x2="524" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="524" y="262" text-anchor="middle" font-size="11" fill="#7a879a">100%</text><g style="cursor: default;"><rect x="242" y="12" width="432" height="28" fill="transparent"></rect><rect x="242" y="12" width="189.80769230769226" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="437.80769230769226" y="25" font-size="12.5" fill="#1f2a3b" font-weight="400">67%</text><text x="466.6076923076923" y="25" font-size="11" fill="#7a879a">coherence 76</text></g><g style="cursor: default;"><rect x="242" y="44" width="432" height="28" fill="transparent"></rect><rect x="242" y="44" width="186.5538461538461" height="18" rx="4" fill="url(#hatch)" stroke="#8d9aae" stroke-width="0.8"></rect><line x1="425.84230769230766" x2="431.2653846153846" y1="53" y2="53" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="425.84230769230766" x2="425.84230769230766" y1="49" y2="57" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="431.2653846153846" x2="431.2653846153846" y1="49" y2="57" stroke="#1f2a3b" stroke-width="1.3"></line><text x="437.2653846153846" y="57" font-size="12.5" fill="#1f2a3b" font-weight="400">66%</text><text x="466.06538461538463" y="57" font-size="11" fill="#7a879a">coherence 74</text></g><g style="cursor: default;"><rect x="242" y="76" width="432" height="28" fill="transparent"></rect><rect x="242" y="76" width="175.7076923076923" height="18" rx="4" fill="var(--sft)" stroke="none" stroke-width="0"></rect><line x1="415.53846153846155" x2="419.87692307692305" y1="85" y2="85" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="415.53846153846155" x2="415.53846153846155" y1="81" y2="89" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="419.87692307692305" x2="419.87692307692305" y1="81" y2="89" stroke="#1f2a3b" stroke-width="1.3"></line><text x="425.87692307692305" y="89" font-size="12.5" fill="#1f2a3b" font-weight="600">62%</text><text x="454.67692307692306" y="89" font-size="11" fill="#7a879a">coherence 68</text></g><g style="cursor: default;"><rect x="242" y="108" width="432" height="28" fill="transparent"></rect><rect x="242" y="108" width="170.8269230769231" height="18" rx="4" fill="var(--grpo)" stroke="none" stroke-width="0"></rect><line x1="409.03076923076924" x2="416.62307692307695" y1="117" y2="117" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="409.03076923076924" x2="409.03076923076924" y1="113" y2="121" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="416.62307692307695" x2="416.62307692307695" y1="113" y2="121" stroke="#1f2a3b" stroke-width="1.3"></line><text x="422.62307692307695" y="121" font-size="12.5" fill="#1f2a3b" font-weight="700">61%</text><text x="451.42307692307696" y="121" font-size="11" fill="#7a879a">coherence 65</text></g><g style="cursor: default;"><rect x="242" y="140" width="432" height="28" fill="transparent"></rect><rect x="242" y="140" width="99.52941176470586" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="347.52941176470586" y="153" font-size="12.5" fill="#1f2a3b" font-weight="400">35%</text><text x="376.32941176470587" y="153" font-size="11" fill="#7a879a">coherence 39</text></g><g style="cursor: default;"><rect x="242" y="172" width="432" height="28" fill="transparent"></rect><rect x="242" y="172" width="84.60000000000002" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="332.6" y="185" font-size="12.5" fill="#1f2a3b" font-weight="400">30%</text><text x="361.40000000000003" y="185" font-size="11" fill="#7a879a">coherence 28</text></g><g style="cursor: default;"><rect x="242" y="204" width="432" height="28" fill="transparent"></rect><rect x="242" y="204" width="39.48000000000002" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="287.48" y="217" font-size="12.5" fill="#1f2a3b" font-weight="400">14%</text><text x="316.28000000000003" y="217" font-size="11" fill="#7a879a">coherence 16</text></g><text x="226" y="25" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">GPT-Realtime</text><text x="226" y="57" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Fun-Audio-Chat-8B (half-duplex)</text><text x="226" y="89" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="600">Awaken SFT</text><text x="226" y="121" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="700">Awaken GRPO</text><text x="226" y="153" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Freeze-Omni</text><text x="226" y="185" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">PersonaPlex</text><text x="226" y="217" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Moshi</text></svg></div>
+  <p class="cap">Fun-Audio-Chat-8B, Awaken SFT, and Awaken GRPO: means over 5, 30, and 20 sampling runs (standard errors 0.5, 0.4, and 0.7 probes, shown as whiskers), judged on the model’s text stream; the published rows judge transcripts of the audio.</p>
+  <details><summary>Show table</summary><div class="tbl"><table>
+    <tbody><tr><th>System</th><th class="n">Probes passed</th><th class="n">Coherence</th></tr>
+    <tr><td>GPT-Realtime</td><td class="n">35/52 (67%)</td><td class="n">76</td></tr>
+    <tr><td>Moshi</td><td class="n">7/50 (14%)</td><td class="n">16</td></tr>
+    <tr><td>Freeze-Omni</td><td class="n">18/51 (35%)</td><td class="n">39</td></tr>
+    <tr><td>PersonaPlex</td><td class="n">15/50 (30%)</td><td class="n">28</td></tr>
+    <tr><td>Fun-Audio-Chat-8B (half-duplex)</td><td class="n">34.4/52 (66%)</td><td class="n">74</td></tr>
+    <tr><td>Awaken SFT</td><td class="n">32.4/52 (62%)</td><td class="n">68</td></tr>
+    <tr class="hl"><td><strong>Awaken GRPO</strong></td><td class="n"><strong>31.5/52 (61%)</strong></td><td class="n"><strong>65</strong></td></tr>
+  </tbody></table></div></details>
+</div>
+
+<h3>Knowledge and reasoning</h3>
+<div class="card">
+  <p class="q"><strong>Spoken logic puzzles</strong> (<a href="https://avera-labs.github.io/InteractionBench/">InteractionBench</a>, ten puzzles).</p>
+  <div class="chart" id="ch-logic"><svg viewBox="0 0 680 262" role="img"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fff"></rect><rect width="2.2" height="5" fill="#b9c3d2"></rect></pattern></defs><line x1="242" x2="242" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray=""></line><text x="242" y="250" text-anchor="middle" font-size="11" fill="#7a879a">0%</text><line x1="335" x2="335" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="335" y="250" text-anchor="middle" font-size="11" fill="#7a879a">25%</text><line x1="428" x2="428" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="428" y="250" text-anchor="middle" font-size="11" fill="#7a879a">50%</text><line x1="521" x2="521" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="521" y="250" text-anchor="middle" font-size="11" fill="#7a879a">75%</text><line x1="614" x2="614" y1="6" y2="234" stroke="#e3e8f0" stroke-dasharray="2 3"></line><text x="614" y="250" text-anchor="middle" font-size="11" fill="#7a879a">100%</text><g style="cursor: default;"><rect x="242" y="12" width="432" height="28" fill="transparent"></rect><rect x="242" y="12" width="372" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="620" y="25" font-size="12.5" fill="#1f2a3b" font-weight="400">100%</text></g><g style="cursor: default;"><rect x="242" y="44" width="432" height="28" fill="transparent"></rect><rect x="242" y="44" width="372" height="18" rx="4" fill="url(#hatch)" stroke="#8d9aae" stroke-width="0.8"></rect><text x="620" y="57" font-size="12.5" fill="#1f2a3b" font-weight="400">100%</text></g><g style="cursor: default;"><rect x="242" y="76" width="432" height="28" fill="transparent"></rect><rect x="242" y="76" width="334.79999999999995" height="18" rx="4" fill="var(--grpo)" stroke="none" stroke-width="0"></rect><text x="582.8" y="89" font-size="12.5" fill="#1f2a3b" font-weight="700">90%</text></g><g style="cursor: default;"><rect x="242" y="108" width="432" height="28" fill="transparent"></rect><rect x="242" y="108" width="323.64" height="18" rx="4" fill="var(--sft)" stroke="none" stroke-width="0"></rect><text x="571.64" y="121" font-size="12.5" fill="#1f2a3b" font-weight="600">87%</text></g><g style="cursor: default;"><rect x="242" y="140" width="432" height="28" fill="transparent"></rect><rect x="242" y="140" width="148.8" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="396.8" y="153" font-size="12.5" fill="#1f2a3b" font-weight="400">40%</text></g><g style="cursor: default;"><rect x="242" y="172" width="432" height="28" fill="transparent"></rect><rect x="242" y="172" width="111.60000000000002" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="359.6" y="185" font-size="12.5" fill="#1f2a3b" font-weight="400">30%</text></g><g style="cursor: default;"><rect x="242" y="204" width="432" height="28" fill="transparent"></rect><rect x="242" y="204" width="111.60000000000002" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="359.6" y="217" font-size="12.5" fill="#1f2a3b" font-weight="400">30%</text></g><text x="226" y="25" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">GPT-Realtime</text><text x="226" y="57" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Fun-Audio-Chat-8B (half-duplex)</text><text x="226" y="89" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="700">Awaken GRPO</text><text x="226" y="121" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="600">Awaken SFT</text><text x="226" y="153" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Freeze-Omni</text><text x="226" y="185" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Moshi</text><text x="226" y="217" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">PersonaPlex</text></svg></div>
+  <p class="cap">Fun-Audio-Chat-8B and Awaken: ten puzzles × 3 sampling seeds, judged on the model’s text stream.</p>
+  <details><summary>Show table</summary><div class="tbl"><table>
+    <tbody><tr><th>System</th><th class="n">Puzzles solved</th></tr>
+    <tr><td>GPT-Realtime</td><td class="n">100%</td></tr>
+    <tr><td>Moshi</td><td class="n">30%</td></tr>
+    <tr><td>Freeze-Omni</td><td class="n">40%</td></tr>
+    <tr><td>PersonaPlex</td><td class="n">30%</td></tr>
+    <tr><td>Fun-Audio-Chat-8B (half-duplex)</td><td class="n">100%</td></tr>
+    <tr><td>Awaken SFT</td><td class="n">87%</td></tr>
+    <tr class="hl"><td><strong>Awaken GRPO</strong></td><td class="n"><strong>90%</strong></td></tr>
+  </tbody></table></div></details>
+</div>
+
+<div class="card">
+  <p class="q"><strong>Spoken question answering</strong>.</p>
+  <div class="chart" id="ch-qa"><svg viewBox="0 0 680 228" role="img"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fff"></rect><rect width="2.2" height="5" fill="#b9c3d2"></rect></pattern></defs><text x="242" y="16" font-size="12.5" font-weight="600" fill="#4a5a70">Llama Q.</text><line x1="242" x2="242" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray=""></line><line x1="283.5" x2="283.5" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="325" x2="325" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="366.5" x2="366.5" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="408" x2="408" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><g style="cursor: default;"><rect x="242" y="30" width="210" height="28" fill="transparent"></rect><rect x="242" y="30" width="152.305" height="18" rx="4" fill="var(--grpo)" stroke="none" stroke-width="0"></rect><line x1="392.41675" x2="396.19325000000003" y1="39" y2="39" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="392.41675" x2="392.41675" y1="35" y2="43" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="396.19325000000003" x2="396.19325000000003" y1="35" y2="43" stroke="#1f2a3b" stroke-width="1.3"></line><text x="402.19325000000003" y="43" font-size="12.5" fill="#1f2a3b" font-weight="700">73.4</text></g><g style="cursor: default;"><rect x="242" y="62" width="210" height="28" fill="transparent"></rect><rect x="242" y="62" width="146.7025" height="18" rx="4" fill="var(--sft)" stroke="none" stroke-width="0"></rect><line x1="387.64425" x2="389.76075000000003" y1="71" y2="71" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="387.64425" x2="387.64425" y1="67" y2="75" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="389.76075000000003" x2="389.76075000000003" y1="67" y2="75" stroke="#1f2a3b" stroke-width="1.3"></line><text x="395.76075000000003" y="75" font-size="12.5" fill="#1f2a3b" font-weight="600">70.7</text></g><g style="cursor: default;"><rect x="242" y="94" width="210" height="28" fill="transparent"></rect><rect x="242" y="94" width="158.115" height="18" rx="4" fill="url(#hatch)" stroke="#8d9aae" stroke-width="0.8"></rect><line x1="397.459" x2="402.771" y1="103" y2="103" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="397.459" x2="397.459" y1="99" y2="107" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="402.771" x2="402.771" y1="99" y2="107" stroke="#1f2a3b" stroke-width="1.3"></line><text x="408.771" y="107" font-size="12.5" fill="#1f2a3b" font-weight="400">76.2</text></g><g style="cursor: default;"><rect x="242" y="126" width="210" height="28" fill="transparent"></rect><rect x="242" y="126" width="150.08474999999999" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="398.08475" y="139" font-size="12.5" fill="#1f2a3b" font-weight="400">72.33</text></g><g style="cursor: default;"><rect x="242" y="158" width="210" height="28" fill="transparent"></rect><rect x="242" y="158" width="153.55" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="401.55" y="171" font-size="12.5" fill="#1f2a3b" font-weight="400">74.00</text></g><g style="cursor: default;"><rect x="242" y="190" width="210" height="28" fill="transparent"></rect><rect x="242" y="190" width="136.26525000000004" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="384.26525000000004" y="203" font-size="12.5" fill="#1f2a3b" font-weight="400">65.67</text></g><text x="464" y="16" font-size="12.5" font-weight="600" fill="#4a5a70">TriviaQA</text><line x1="464" x2="464" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray=""></line><line x1="505.5" x2="505.5" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="547" x2="547" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="588.5" x2="588.5" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><line x1="630" x2="630" y1="24" y2="220" stroke="#e3e8f0" stroke-dasharray="2 3"></line><g style="cursor: default;"><rect x="464" y="30" width="210" height="28" fill="transparent"></rect><rect x="464" y="30" width="75.11500000000001" height="18" rx="4" fill="var(--grpo)" stroke="none" stroke-width="0"></rect><line x1="537.3305" x2="540.8995" y1="39" y2="39" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="537.3305" x2="537.3305" y1="35" y2="43" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="540.8995" x2="540.8995" y1="35" y2="43" stroke="#1f2a3b" stroke-width="1.3"></line><text x="546.8995" y="43" font-size="12.5" fill="#1f2a3b" font-weight="700">36.2</text></g><g style="cursor: default;"><rect x="464" y="62" width="210" height="28" fill="transparent"></rect><rect x="464" y="62" width="73.66250000000002" height="18" rx="4" fill="var(--sft)" stroke="none" stroke-width="0"></rect><line x1="537.18525" x2="538.13975" y1="71" y2="71" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="537.18525" x2="537.18525" y1="67" y2="75" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="538.13975" x2="538.13975" y1="67" y2="75" stroke="#1f2a3b" stroke-width="1.3"></line><text x="544.13975" y="75" font-size="12.5" fill="#1f2a3b" font-weight="600">35.5</text></g><g style="cursor: default;"><rect x="464" y="94" width="210" height="28" fill="transparent"></rect><rect x="464" y="94" width="101.05250000000001" height="18" rx="4" fill="url(#hatch)" stroke="#8d9aae" stroke-width="0.8"></rect><line x1="564.61675" x2="565.48825" y1="103" y2="103" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="564.61675" x2="564.61675" y1="99" y2="107" stroke="#1f2a3b" stroke-width="1.3"></line><line x1="565.48825" x2="565.48825" y1="99" y2="107" stroke="#1f2a3b" stroke-width="1.3"></line><text x="571.48825" y="107" font-size="12.5" fill="#1f2a3b" font-weight="400">48.7</text></g><g style="cursor: default;"><rect x="464" y="126" width="210" height="28" fill="transparent"></rect><rect x="464" y="126" width="61.39925000000005" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="531.39925" y="139" font-size="12.5" fill="#1f2a3b" font-weight="400">29.59</text></g><g style="cursor: default;"><rect x="464" y="158" width="210" height="28" fill="transparent"></rect><rect x="464" y="158" width="62.41599999999994" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="532.4159999999999" y="171" font-size="12.5" fill="#1f2a3b" font-weight="400">30.08</text></g><g style="cursor: default;"><rect x="464" y="190" width="210" height="28" fill="transparent"></rect><rect x="464" y="190" width="38.30450000000002" height="18" rx="4" fill="var(--ext)" stroke="none" stroke-width="0"></rect><text x="508.3045" y="203" font-size="12.5" fill="#1f2a3b" font-weight="400">18.46</text></g><text x="226" y="43" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="700">Awaken GRPO</text><text x="226" y="75" text-anchor="end" font-size="12.5" fill="#1f2a3b" font-weight="600">Awaken SFT</text><text x="226" y="107" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Fun-Audio-Chat-8B (half-duplex)</text><text x="226" y="139" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Fun-Audio-Chat-Duplex-8B (reported)</text><text x="226" y="171" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Freeze-Omni (reported)</text><text x="226" y="203" text-anchor="end" font-size="12.5" fill="#4a5a70" font-weight="400">Moshi (reported)</text></svg></div>
+  <p class="cap">Reported rows: Table 7 of the Fun-Audio-Chat technical report. Fun-Audio-Chat-8B and Awaken: means over 3 sampling seeds (standard errors 0.2–1.3, shown as whiskers). <a href="https://arxiv.org/abs/1809.02789">OpenBookQA</a>: <a href="https://github.com/MatthewCYM/VoiceBench">VoiceBench</a> spoken split (455 items); Awaken scored on the text stream it produces while speaking, starting its answer once the question ends, one sampling seed; Fun-Audio-Chat-8B reported text-only results, i.e. with its audio output turned off (Table 2 of the technical report); Freeze-Omni and Moshi from the <a href="https://github.com/MatthewCYM/VoiceBench">VoiceBench leaderboard</a>.</p>
+  <details><summary>Show table</summary><div class="tbl"><table>
+    <tbody><tr><th>System</th><th class="n">Llama Q.</th><th class="n">TriviaQA</th><th class="n">OpenBookQA</th></tr>
+    <tr><td>Fun-Audio-Chat-8B (half-duplex)</td><td class="n">76.2</td><td class="n">48.7</td><td class="n">83.52</td></tr>
+    <tr><td>Fun-Audio-Chat-Duplex-8B (reported)</td><td class="n">72.33</td><td class="n">29.59</td><td class="n">not reported</td></tr>
+    <tr><td>Freeze-Omni (reported)</td><td class="n">74.00</td><td class="n">30.08</td><td class="n">30.98</td></tr>
+    <tr><td>Moshi (reported)</td><td class="n">65.67</td><td class="n">18.46</td><td class="n">25.93</td></tr>
+    <tr><td>Awaken SFT</td><td class="n">70.7</td><td class="n">35.5</td><td class="n">76.2</td></tr>
+    <tr class="hl"><td><strong>Awaken GRPO</strong></td><td class="n"><strong>73.4</strong></td><td class="n"><strong>36.2</strong></td><td class="n"><strong>75.6</strong></td></tr>
+  </tbody></table></div></details>
+</div>
+
+<p>In the report’s own speech-output results, moving Fun-Audio-Chat to full duplex costs 14–24 points on <a href="https://arxiv.org/abs/2305.15255">Llama Questions</a>, <a href="https://arxiv.org/abs/1705.03551">TriviaQA</a>, and <a href="https://aclanthology.org/D13-1160/">Web Questions</a>. Awaken matches or beats the official duplex model and the other open full-duplex models on knowledge, and solves 90% of the logic puzzles against 30–40% for them. On spoken OpenBookQA, GRPO and SFT score within noise of each other (75.6 vs 76.2): the interaction training leaves reasoning intact.</p>
+</section>
+
+<!-- ============================ RELATED / CONCLUSION ============================ -->
+<section id="related">
+<div class="kicker"><i>07</i>Context</div>
+<h2>Related work</h2>
+<p><a href="https://arxiv.org/abs/2607.07148">DuplexPO</a> and <a href="https://arxiv.org/abs/2604.10065">ASPIRin</a> also separate <em>when</em> to speak from <em>what</em> to say during reinforcement learning, to avoid the reasoning and content losses that timing-focused training can cause. Our GRPO stage uses ASPIRin-style action projection, with event-specific credit and separate word-token regularization.</p>
+</section>
+
+<section id="conclusion">
+<div class="kicker"><i>08</i>Summary</div>
+<h2>Conclusion</h2>
+<p>Careful data composition and staged training let a full-duplex model listen actively without giving up its intelligence. Awaken backchannels competitively with dedicated full-duplex models while largely keeping its grounding, knowledge, and reasoning. Listener-response variety and reply consistency are next.</p>
+</section>
+
+<!-- ============================ REFERENCES / CITATION / LICENSE ============================ -->
+<section id="references">
+<div class="kicker"><i>09</i>Resources</div>
+<h2>References</h2>
+<div class="resources"><a href="https://github.com/avera-labs/AwakenFullDuplex">Code · GitHub</a><a href="https://huggingface.co/openmartdev/awaken-full-duplex">Model · Hugging Face</a><a href="https://huggingface.co/FunAudioLLM/Fun-Audio-Chat-8B">Base model · Fun-Audio-Chat-8B</a></div>
+<ol class="refs">
+  <li><a href="https://arxiv.org/abs/2512.20156">Fun-Audio-Chat Technical Report.</a> arXiv:2512.20156, 2025.</li>
+  <li><a href="https://arxiv.org/abs/2505.17589">CosyVoice 3: Towards In-the-wild Speech Generation via Scaling-up and Post-training.</a> arXiv:2505.17589, 2025.</li>
+  <li><a href="https://arxiv.org/abs/2410.00037">Moshi: a speech-text foundation model for real-time dialogue.</a> arXiv:2410.00037, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2411.00774">Freeze-Omni: A Smart and Low Latency Speech-to-speech Dialogue Model with Frozen LLM.</a> arXiv:2411.00774, 2024.</li>
+  <li><a href="https://research.nvidia.com/labs/adlr/personaplex/">NVIDIA PersonaPlex: Natural Conversational AI With Any Role and Voice.</a> NVIDIA ADLR.</li>
+  <li><a href="https://openai.com/index/introducing-gpt-realtime/">Introducing gpt-realtime.</a> OpenAI, 2025.</li>
+  <li><a href="https://avera-labs.github.io/InteractionBench/">InteractionBench.</a> Avera Labs.</li>
+  <li><a href="https://arxiv.org/abs/2410.17196">VoiceBench: Benchmarking LLM-Based Voice Assistants.</a> arXiv:2410.17196, 2024.</li>
+  <li><a href="https://arxiv.org/abs/1809.02789">Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering (OpenBookQA).</a> EMNLP 2018.</li>
+  <li><a href="https://arxiv.org/abs/1705.03551">TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension.</a> ACL 2017.</li>
+  <li><a href="https://arxiv.org/abs/2305.15255">Spoken Question Answering and Speech Continuation Using Spectrogram-Powered LLM (Llama Questions).</a> arXiv:2305.15255, 2023.</li>
+  <li><a href="https://aclanthology.org/D13-1160/">Semantic Parsing on Freebase from Question-Answer Pairs (WebQuestions).</a> EMNLP 2013.</li>
+  <li><a href="https://arxiv.org/abs/2402.03300">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (GRPO).</a> arXiv:2402.03300, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2607.07148">Decoupling Conversational Dynamics in Full-Duplex Spoken Models through Reinforcement Learning (DuplexPO).</a> arXiv:2607.07148, 2026.</li>
+  <li><a href="https://arxiv.org/abs/2604.10065">ASPIRin: Action Space Projection for Interactivity-Optimized Reinforcement Learning in Full-Duplex Speech Language Models.</a> arXiv:2604.10065, 2026.</li>
+</ol>
+</section>
+
+<section id="citation">
+<h2>Citation</h2>
+<pre class="bib">@misc{awaken2026,
+  title        = {Awaken: Efficient Full-Duplex Adaptation with Capability Retention},
+  author       = {Richard Yucheng He and Yihang Liu and Tairan Chen and Baodong Cao and Chen Xu},
+  year         = {2026},
+  howpublished = {\url{https://github.com/avera-labs/AwakenFullDuplex}}
+}</pre>
+</section>
+
+<section id="license">
+<h2>License</h2>
+<p>Awaken’s code and model weights are released under the <a href="https://github.com/avera-labs/AwakenFullDuplex/blob/main/LICENSE">Apache License 2.0</a>, the same license as the base model <a href="https://huggingface.co/FunAudioLLM/Fun-Audio-Chat-8B">Fun-Audio-Chat-8B</a>. Awaken builds on <a href="https://github.com/FunAudioLLM/Fun-Audio-Chat">Fun-Audio-Chat</a> and <a href="https://github.com/FunAudioLLM/CosyVoice">CosyVoice</a> (Apache 2.0) and the <a href="https://github.com/QwenLM/Qwen3">Qwen3</a> text backbone (Apache 2.0); its audio encoder follows <a href="https://github.com/openai/whisper">Whisper</a>’s encoder (MIT). See <a href="https://github.com/avera-labs/AwakenFullDuplex/blob/main/NOTICE">NOTICE</a> for details.</p>
+</section>
+
+</main>
+</div>
+
+<footer>Awaken · <a href="https://github.com/avera-labs/AwakenFullDuplex">Code</a> · <a href="https://huggingface.co/openmartdev/awaken-full-duplex">Model</a> · Built on <a href="https://qwenaudio.github.io/funaudiochat/">Fun-Audio-Chat</a> · Apache 2.0</footer>
+<div id="tip"></div>
+
+<script>
+/* ---------- Audio samples: set `src` when a clip is ready (stereo: caller left, Awaken right) ---------- */
+const SAMPLES = [
+  {id:'rough_week', title:'Listening with sympathy', tint:'var(--rose-t)', src:'assets/week.mp3',
+   peaks:[15,37,61,65,50,77,50,57,65,60,55,57,57,66,51,55,53,63,59,77,51,52,53,69,88,64,44,67,62,76,88,83,62,31,57,63,74,80,75,62,62,86,81,90,58,62,59,55,71,67,59,45,73,64,57,57,72,14,62,58,45,69,84,76],
+   desc:'A caller talks through a rough week, pausing and rambling, and only asks a question at the very end: “Am I overreacting?”',
+   listen:['Backchannels while the caller talks','Patience','A warm reply'],
+   icon:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'},
+  {id:'barge_in', title:'Handling interruptions', tint:'var(--blue-t)', src:'assets/barge.mp3',
+   peaks:[14,41,57,45,38,37,32,60,90,90,83,75,73,73,72,71,80,78,66,69,53,53,67,43,47,28,63,75,73,58,67,83,77,70,74,59,62,58,29,14,14,40,49,49,34,83,79,84,70,78,78,77,80,67,72,77,82,70,74,80,69,26,14,14],
+   desc:'The caller asks how airplanes fly, then cuts in with quick redirects while the answer is still underway.',
+   listen:['Yielding the floor','Answering the redirect','Resuming'],
+   icon:'<path d="M4 12h9"/><path d="M10 8l4 4-4 4"/><path d="M19 5v14"/>'},
+  {id:'grocery', title:'Keeping track', tint:'var(--mint-t)', src:'assets/grocery.mp3',
+   peaks:[56,60,51,63,60,56,41,69,71,64,50,53,57,77,68,50,54,54,14,36,58,67,52,58,69,75,23,54,59,65,79,78,32,37,69,58,45,14,40,72,59,63,66,66,51,15,64,54,55,45,58,76,75,50,16,60,68,61,49,72,90,70,65,35],
+   desc:'The caller builds a grocery list, changes quantities midway.',
+   listen:['Remembering details','Applying corrections'],
+   icon:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>'},
+  {id:'math', title:'Everyday math', tint:'var(--amber-t)', src:'assets/math.mp3',
+   peaks:[14,46,53,35,56,43,52,53,47,42,34,67,70,59,60,65,35,68,65,32,64,26,17,15,15,53,33,18,39,42,39,34,35,52,36,29,72,37,48,81,89,34,65,64,59,20,14,45,16,56,42,42,27,46,90,75,69,56,17,45,49,36,44,14],
+   desc:'Quick arithmetic said out loud.',
+   listen:['Spoken reasoning','Short numeric answers'],
+   icon:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/>'},
+  {id:'unknown_info', title:'Knowing what it doesn’t know', tint:'var(--lav-t)', src:'assets/unkown_info.mp3',
+   peaks:[63,70,90,67,36,45,61,70,79,59,72,42,39,66,43,61,54,61,54,39,52,56,58,66,66,63,55,33,67,48,58,55,60,65,51,69,49,53,62,44,41,66,78,78,61,39,43,59,47,14,57,45,38,23,59,66,85,65,32,56,52,58,57,51],
+   desc:'The caller asks things no assistant could know, such as what they had for breakfast, then ends with a question that can be answered.',
+   listen:['Honesty','No invented facts'],
+   icon:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><path d="M12 17.5v.01"/>'},
+];
+(function renderSamples(){
+  const host=document.getElementById('samples');
+  const PLAY='<path d="M2 1l9 5-9 5z"/>', PAUSE='<path d="M2 1h3v10H2zM7 1h3v10H7z"/>';
+  const fallback=Array.from({length:64},(_,i)=>18+60*Math.abs(Math.sin(i*0.55)*Math.cos(i*0.17)));
+  const wave=(p)=>(p||fallback).map(h=>`<i style="height:${Math.round(h)}%"></i>`).join('');
+  const fmt=t=>{t=Math.max(0,Math.floor(t||0));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;};
+  SAMPLES.forEach((s,i)=>{
+    const player = s.src
+      ? `<div class="player ready"><button class="pb" type="button" aria-label="Play ${s.title}"><svg viewBox="0 0 12 12">${PLAY}</svg></button><div class="wave" role="slider" aria-label="Seek" tabindex="0">${wave(s.peaks)}</div><span class="tm">0:00</span><audio preload="metadata" src="${s.src}"></audio></div>`
+      : `<div class="player" aria-label="Audio coming soon"><div class="pb"><svg viewBox="0 0 12 12">${PLAY}</svg></div><div class="wave">${wave()}</div><span class="soon">Coming soon</span></div>`;
+    host.insertAdjacentHTML('beforeend',`<article class="sample" id="sample-${s.id}">
+      <div class="hd"><div class="ic" style="background:${s.tint}"><svg viewBox="0 0 24 24">${s.icon}</svg></div>
+      <div><div class="num">SAMPLE ${String(i+1).padStart(2,'0')}</div><h4>${s.title}</h4></div></div>
+      <p>${s.desc}</p>
+      <div class="lf">${s.listen.map(t=>`<span>${t}</span>`).join('')}</div>
+      ${player}</article>`);
+  });
+  const audios=[...host.querySelectorAll('.player.ready audio')];
+  host.querySelectorAll('.player.ready').forEach(pl=>{
+    const au=pl.querySelector('audio'), btn=pl.querySelector('.pb'), ico=btn.querySelector('svg'),
+          wv=pl.querySelector('.wave'), bars=[...wv.children], tm=pl.querySelector('.tm');
+    const label=btn.getAttribute('aria-label').replace(/^Play /,'');
+    const paint=()=>{
+      const d=au.duration||0, f=d?au.currentTime/d:0, n=Math.round(f*bars.length);
+      bars.forEach((b,k)=>b.classList.toggle('on',k<n));
+      tm.textContent=d?`${fmt(au.currentTime)} / ${fmt(d)}`:fmt(au.currentTime);
+      wv.setAttribute('aria-valuenow',Math.round(f*100));
+    };
+    const seek=f=>{if(au.duration){au.currentTime=Math.min(Math.max(f,0),1)*au.duration;paint();}};
+    btn.addEventListener('click',()=>au.paused?au.play():au.pause());
+    au.addEventListener('play',()=>{audios.forEach(o=>o!==au&&o.pause());ico.innerHTML=PAUSE;btn.setAttribute('aria-label','Pause '+label);});
+    au.addEventListener('pause',()=>{ico.innerHTML=PLAY;btn.setAttribute('aria-label','Play '+label);});
+    au.addEventListener('ended',()=>{au.currentTime=0;paint();});
+    ['timeupdate','loadedmetadata','seeked'].forEach(e=>au.addEventListener(e,paint));
+    wv.addEventListener('click',e=>{const r=wv.getBoundingClientRect();seek((e.clientX-r.left)/r.width);});
+    wv.addEventListener('keydown',e=>{
+      if(!au.duration)return;
+      const step=5/au.duration, f=au.currentTime/au.duration;
+      if(e.key==='ArrowRight'){seek(f+step);e.preventDefault();}
+      else if(e.key==='ArrowLeft'){seek(f-step);e.preventDefault();}
+      else if(e.key===' '||e.key==='Enter'){btn.click();e.preventDefault();}
+    });
+  });
+})();
+
+/* ---------- Evaluation data (fill the FAC-8B `null` cells when the base runs finish) ---------- */
+const C = {grpo:'var(--grpo)', sft:'var(--sft)', ext:'var(--ext)', half:'url(#hatch)'};
+const BC = [
+  {n:'GPT-Realtime',k:'ext',pass:10,take:5, dx:10,dy:4},
+  {n:'Moshi',k:'ext',pass:78,take:22, dx:10,dy:4},
+  {n:'Freeze-Omni',k:'ext',pass:0,take:39, dx:-10,dy:-10,anchor:'end'},
+  {n:'PersonaPlex',k:'ext',pass:83,take:11, dx:10,dy:4},
+  {n:'Awaken SFT',k:'sft',pass:1,take:6, dx:10,dy:4},
+  {n:'Awaken GRPO',k:'grpo',pass:63,take:3, dx:10,dy:4},
+];
+const GROUND = [ // pct = probes/total; se in probes
+  {n:'GPT-Realtime',k:'ext',v:35/52*100,lab:'67%',sub:'coherence 76'},
+  {n:'Fun-Audio-Chat-8B (half-duplex)',k:'half',v:34.4/52*100,se:0.5/52*100,lab:'66%',sub:'coherence 74'},
+  {n:'Awaken SFT',k:'sft',v:32.4/52*100,se:0.4/52*100,lab:'62%',sub:'coherence 68'},
+  {n:'Awaken GRPO',k:'grpo',v:31.5/52*100,se:0.7/52*100,lab:'61%',sub:'coherence 65'},
+  {n:'Freeze-Omni',k:'ext',v:18/51*100,lab:'35%',sub:'coherence 39'},
+  {n:'PersonaPlex',k:'ext',v:15/50*100,lab:'30%',sub:'coherence 28'},
+  {n:'Moshi',k:'ext',v:7/50*100,lab:'14%',sub:'coherence 16'},
+];
+const LOGIC = [
+  {n:'GPT-Realtime',k:'ext',v:100},
+  {n:'Fun-Audio-Chat-8B (half-duplex)',k:'half',v:100},
+  {n:'Awaken GRPO',k:'grpo',v:90},
+  {n:'Awaken SFT',k:'sft',v:87},
+  {n:'Freeze-Omni',k:'ext',v:40},
+  {n:'Moshi',k:'ext',v:30},
+  {n:'PersonaPlex',k:'ext',v:30},
+];
+const QA_COLS = [{key:'lq',label:'Llama Q.',max:80},{key:'tqa',label:'TriviaQA',max:80},{key:'obqa',label:'OpenBookQA',max:100}];
+const QA = [
+  {n:'Awaken GRPO',k:'grpo',lq:{v:73.4,se:0.91},tqa:{v:36.2,se:0.86},obqa:{v:75.6}},
+  {n:'Awaken SFT',k:'sft',lq:{v:70.7,se:0.51},tqa:{v:35.5,se:0.23},obqa:{v:76.2}},
+  {n:'Fun-Audio-Chat-8B',k:'half',lq:{v:76.2,se:1.28},tqa:{v:48.7,se:0.21},obqa:{v:83.52,f:2}},
+  {n:'Fun-Audio-Chat-Duplex-8B',k:'ext',lq:{v:72.33,f:2},tqa:{v:29.59,f:2},obqa:{nr:true}},
+  {n:'Freeze-Omni',k:'ext',lq:{v:74.00,f:2},tqa:{v:30.08,f:2},obqa:{v:30.98,f:2}},
+  {n:'Moshi',k:'ext',lq:{v:65.67,f:2},tqa:{v:18.46,f:2},obqa:{v:25.93,f:2}},
+];
+
+/* ---------- tiny SVG helpers ---------- */
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+function svgRoot(host,w,h){host.replaceChildren();const s=el('svg',{viewBox:`0 0 ${w} ${h}`,role:'img'},host);
+  const d=el('defs',{},s);const p=el('pattern',{id:'hatch',width:5,height:5,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},d);
+  el('rect',{width:5,height:5,fill:'#fff'},p);el('rect',{width:2.2,height:5,fill:'#b9c3d2'},p);
+  return s;}
+const tip=document.getElementById('tip');
+function hover(node,html){node.style.cursor='default';
+  node.addEventListener('mousemove',e=>{tip.innerHTML=html;tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';});
+  node.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const INK='#1f2a3b', INK2='#4a5a70', MUTED='#7a879a', LINE='#e3e8f0';
+const bold=k=>k==='grpo'?700:(k==='sft'?600:400);
+
+/* ---------- BC scatter ---------- */
+(function(){
+  const W=680,H=360,m={l:52,r:24,t:18,b:46};const pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const x=v=>m.l+v/40*pw, y=v=>m.t+(1-v/100)*ph;
+  const s=svgRoot(document.getElementById('ch-bc'),W,H);
+  // ideal corner
+  el('text',{x:x(0)+8,y:y(100)+16,'font-size':11.5,fill:'#3f8a64','font-weight':600},s,'↖ better: more backchannels, fewer floor-takes');
+  for(let v=0;v<=100;v+=25){el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),stroke:LINE},s);el('text',{x:m.l-8,y:y(v)+4,'text-anchor':'end','font-size':11.5,fill:MUTED},s,v+'%');}
+  for(let v=0;v<=40;v+=10){el('text',{x:x(v),y:H-m.b+18,'text-anchor':'middle','font-size':11.5,fill:MUTED},s,v+'%');}
+  el('text',{x:m.l+pw/2,y:H-6,'text-anchor':'middle','font-size':12.5,fill:INK2},s,'Floor-take rate (lower is better)');
+  el('text',{transform:`translate(13 ${m.t+ph/2}) rotate(-90)`,'text-anchor':'middle','font-size':12.5,fill:INK2},s,'Backchannel pass rate →');
+  // SFT -> GRPO arrow
+  const a=BC.find(d=>d.n==='Awaken SFT'), b=BC.find(d=>d.n==='Awaken GRPO');
+  const mk=el('marker',{id:'arr',markerWidth:8,markerHeight:8,refX:6,refY:4,orient:'auto'},s.querySelector('defs'));
+  el('path',{d:'M1 1 L7 4 L1 7',fill:'none',stroke:'#e0702a','stroke-width':1.4},mk);
+  el('path',{d:`M${x(a.take)-2} ${y(a.pass)-9} Q ${x(-0.5)} ${y(30)} ${x(b.take)-1} ${y(b.pass)+10}`,fill:'none',stroke:'#e0702a','stroke-width':1.6,'stroke-dasharray':'4 3','marker-end':'url(#arr)'},s);
+  BC.forEach(d=>{
+    const g=el('g',{},s);
+    el('circle',{cx:x(d.take),cy:y(d.pass),r:14,fill:'transparent'},g);
+    el('circle',{cx:x(d.take),cy:y(d.pass),r:d.k==='grpo'?7.5:6.5,fill:C[d.k],stroke:'#fff','stroke-width':2},g);
+    el('text',{x:x(d.take)+d.dx,y:y(d.pass)+d.dy,'font-size':12.5,fill:INK,'font-weight':bold(d.k),'text-anchor':d.anchor||'start'},g,d.n);
+    hover(g,`<b>${d.n}</b><br>Backchannel pass ${d.pass}%<br>Floor-take ${d.take}%`);
+  });
+})();
+
+/* ---------- horizontal bar table (one or more metric columns) ---------- */
+function barTable(hostId,rows,cols,opt={}){
+  const labW=opt.labW||236, colW=opt.colW||((680-labW)/cols.length), rowH=opt.rowH||32, top=opt.top||(cols.length>1?30:12);
+  const W=labW+colW*cols.length, H=top+rows.length*rowH+(opt.axis?26:6);
+  const s=svgRoot(document.getElementById(hostId),W,H);
+  cols.forEach((c,ci)=>{
+    const x0=labW+ci*colW+6, bw=colW-(opt.valW||54)-12, max=c.max||100;
+    const X=v=>x0+v/max*bw;
+    if(cols.length>1) el('text',{x:x0,y:16,'font-size':12.5,'font-weight':600,fill:INK2},s,c.label);
+    if(opt.band){el('rect',{x:X(opt.band[0]),y:top-6,width:X(opt.band[1])-X(opt.band[0]),height:rows.length*rowH+4,fill:'#f4f6fa'},s);
+      el('text',{x:(X(opt.band[0])+X(opt.band[1]))/2,y:top+rows.length*rowH+12,'text-anchor':'middle','font-size':11,fill:MUTED},s,opt.bandLabel);}
+    for(let v=0;v<=max;v+=(opt.tick||25)){el('line',{x1:X(v),x2:X(v),y1:top-6,y2:top+rows.length*rowH-2,stroke:LINE,'stroke-dasharray':v?'2 3':''},s);
+      if(opt.axis) el('text',{x:X(v),y:top+rows.length*rowH+(opt.band?26:14),'text-anchor':'middle','font-size':11,fill:MUTED},s,v+(opt.unit||''));}
+    rows.forEach((r,ri)=>{
+      const cell=c.key?r[c.key]:r; const yy=top+ri*rowH, bh=rowH-14, g=el('g',{},s);
+      el('rect',{x:x0,y:yy,width:bw+(opt.valW||54),height:rowH-4,fill:'transparent'},g);
+      if(cell.nr){el('text',{x:x0+2,y:yy+bh/2+4,'font-size':11.5,fill:MUTED},g,'not reported');hover(g,`<b>${r.n}</b><br>${c.label||''}: not reported`);return;}
+      if(cell.v==null){el('rect',{x:x0,y:yy,width:bw*0.62,height:bh,rx:4,fill:'#fffaf0',stroke:'#e2c48c','stroke-dasharray':'4 3'},g);
+        el('text',{x:x0+10,y:yy+bh/2+4,'font-size':11.5,fill:'#8a6a2a','font-weight':600},g,'pending');hover(g,`<b>${r.n}</b><br>${c.label||''} run in progress`);return;}
+      el('rect',{x:x0,y:yy,width:Math.max(2,X(cell.v)-x0),height:bh,rx:4,fill:C[r.k],stroke:r.k==='half'?'#8d9aae':'none','stroke-width':r.k==='half'?0.8:0},g);
+      if(cell.se){const a=X(cell.v-cell.se),b=X(cell.v+cell.se),cy=yy+bh/2;
+        el('line',{x1:a,x2:b,y1:cy,y2:cy,stroke:INK,'stroke-width':1.3},g);el('line',{x1:a,x2:a,y1:cy-4,y2:cy+4,stroke:INK,'stroke-width':1.3},g);el('line',{x1:b,x2:b,y1:cy-4,y2:cy+4,stroke:INK,'stroke-width':1.3},g);}
+      const lab=cell.lab||(cell.f?cell.v.toFixed(cell.f):(opt.unit==='%'?Math.round(cell.v)+'%':cell.v.toFixed(1)));
+      el('text',{x:X(cell.v+(cell.se||0))+6,y:yy+bh/2+4,'font-size':12.5,fill:INK,'font-weight':bold(r.k)},g,lab);
+      if(cell.sub) el('text',{x:X(cell.v+(cell.se||0))+6+lab.length*7.6+6,y:yy+bh/2+4,'font-size':11,fill:MUTED},g,cell.sub);
+      hover(g,`<b>${r.n}</b><br>${c.label?c.label+': ':''}${lab}${cell.se?` (±${(cell.se).toFixed(1)} SE)`:''}${cell.sub?'<br>'+cell.sub:''}`);
+    });
+  });
+  rows.forEach((r,ri)=>{const yy=top+ri*rowH+(rowH-14)/2+4;
+    el('text',{x:labW-10,y:yy,'text-anchor':'end','font-size':12.5,fill:r.k==='ext'||r.k==='half'?INK2:INK,'font-weight':bold(r.k)},s,r.n);});
+}
+barTable('ch-ground',GROUND.map(r=>({...r})),[{label:'Probes passed',max:100}],{unit:'%',axis:true,band:[14,35],bandLabel:'open full-duplex models',valW:150});
+barTable('ch-logic',LOGIC,[{label:'Puzzles solved',max:100}],{unit:'%',axis:true,valW:60});
+barTable('ch-qa',QA,QA_COLS,{labW:180,tick:20,valW:44,rowH:32});
+
+/* ---------- TOC highlight ---------- */
+const links=[...document.querySelectorAll('#toc a')];
+const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('main section').forEach(sec=>obs.observe(sec));
+</script>
+
+
+</body></html>

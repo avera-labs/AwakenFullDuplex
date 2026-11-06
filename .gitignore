@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+build/
+dist/
+pretrained/
+*.plan
+*.onnx
+*.pt
+!assets/voices/*.pt
+*.safetensors
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+temp/
+.env

@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Awaken Full Duplex</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/" aria-label="Awaken Full Duplex"
+        ><span class="brand-icon">a</span><strong>awaken</strong
+        ><span class="brand-divider"></span><span>Full Duplex</span></a
+      >
+      <div class="header-meta">
+        <span class="tag">DEVELOPER PLAYGROUND</span
+        ><span id="connection" class="status"><i></i>Disconnected</span>
+      </div>
+    </header>
+    <main>
+      <div class="page-heading">
+        <div>
+          <div class="eyebrow">LISTEN. SPEAK. INTERRUPT.</div>
+          <h1>Awaken Full Duplex</h1>
+          <p>Talk to the model in real time and inspect every frame.</p>
+        </div>
+        <div class="protocol">
+          <b>24<span> kHz</span></b
+          ><span>PCM16 · MONO · 200 ms / frame</span>
+        </div>
+      </div>
+      <div class="backend-bar">
+        <span
+          ><i id="health-dot" class="dot"></i
+          ><b id="health-status">Checking inference server…</b></span
+        ><code id="upstream">—</code
+        ><button id="refresh" class="text-button">Refresh status ↻</button>
+      </div>
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <div class="workspace">
+        <aside class="panel configuration">
+          <div class="panel-heading">
+            <h2>Session settings</h2>
+            <span class="index">01</span>
+          </div>
+          <fieldset id="settings">
+            <label class="field-title">Input source</label>
+            <div class="segmented">
+              <label
+                ><input type="radio" name="mode" value="mic" checked /><span
+                  >◉ Live microphone</span
+                ></label
+              ><label
+                ><input type="radio" name="mode" value="file" /><span
+                  >↥ Audio file</span
+                ></label
+              >
+            </div>
+            <div id="mic-options">
+              <p class="hint">
+                Listen, speak, and interrupt. Headphones recommended.
+              </p>
+              <label class="field-title" for="microphone-device"
+                >Microphone</label
+              >
+              <select id="microphone-device">
+                <option value="">System default microphone</option>
+              </select>
+              <button
+                id="refresh-microphones"
+                class="text-button"
+                type="button"
+              >
+                Refresh devices ↻
+              </button>
+              <p id="microphone-status" class="hint" role="status">
+                Device and input status will appear when you start.
+              </p>
+              <label class="check"
+                ><input id="echo" type="checkbox" checked />Echo
+                cancellation<span>Recommended with speakers</span></label
+              >
+              <label class="check"
+                ><input id="auto-gain" type="checkbox" checked />Automatic
+                gain<span>Boost quiet microphone input</span></label
+              >
+            </div>
+            <div id="file-options" hidden>
+              <label class="upload"
+                >Choose an audio file<input
+                  id="audio-file"
+                  type="file"
+                  accept="audio/*"
+                /><span id="file-name"
+                  >WAV / MP3 / browser-supported audio</span
+                ></label
+              ><audio id="file-preview" controls hidden></audio
+              ><label class="field-title" for="tail"
+                >Wait for a reply after the file ends</label
+              >
+              <div class="input-unit">
+                <input
+                  id="tail"
+                  type="number"
+                  min="0"
+                  max="60"
+                  step="1"
+                  value="6"
+                /><span>s of silence</span>
+              </div>
+              <p class="hint">
+                Streams in real time as 24 kHz mono. No microphone permission
+                needed.
+              </p>
+            </div>
+            <div class="field-row">
+              <div>
+                <label class="field-title" for="voice">Voice</label
+                ><select id="voice">
+                  <option value="">Server default</option>
+                  <option value="preset-female" selected>preset-female</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-title" for="preset">Decode preset</label
+                ><select id="preset">
+                  <option value="live">live</option>
+                  <option value="bench">bench</option>
+                </select>
+              </div>
+            </div>
+            <label class="field-title" for="prompt"
+              >Additional system prompt</label
+            ><textarea
+              id="prompt"
+              rows="3"
+              maxlength="2000"
+              placeholder="For example: Keep your replies brief."
+            ></textarea>
+            <details class="advanced">
+              <summary>Advanced settings<span>+</span></summary>
+              <label class="field-title" for="seed">Random seed</label
+              ><input
+                id="seed"
+                type="number"
+                min="0"
+                max="1073741823"
+                step="1"
+                placeholder="Leave blank for a server-generated seed"
+              /><label class="field-title" for="decode"
+                >Decode overrides (JSON)</label
+              ><textarea
+                id="decode"
+                rows="3"
+                spellcheck="false"
+                placeholder='{"text_temperature": 0.5}'
+              ></textarea
+              ><label class="field-title" for="buffer">Playback buffer</label>
+              <div class="input-unit">
+                <input
+                  id="buffer"
+                  type="number"
+                  min="40"
+                  max="2000"
+                  step="20"
+                  value="200"
+                /><span>ms</span>
+              </div>
+            </details>
+            <label class="check record-option"
+              ><input id="record" type="checkbox" checked />Record
+              conversation<span>User L / AI R · Local WAV</span></label
+            >
+          </fieldset>
+          <button id="start" class="primary">
+            Start conversation <span>↗</span>
+          </button>
+          <button id="stop" class="stop" disabled>
+            ■ End and save recording
+          </button>
+          <p class="footnote">
+            Recordings stay in browser memory and are cleared on refresh. The
+            server accepts one session at a time.
+          </p>
+        </aside>
+        <section class="main-column">
+          <div class="panel conversation">
+            <div class="panel-heading">
+              <h2>
+                Conversation <span id="mode-label" class="small-tag">LIVE</span>
+              </h2>
+              <div class="conversation-actions">
+                <button id="resume-audio" class="text-button" hidden>
+                  Resume audio</button
+                ><label class="check compact"
+                  ><input id="mute" type="checkbox" />Mute playback</label
+                ><span id="duration" class="mono">00:00</span>
+              </div>
+            </div>
+            <div class="tracks">
+              <div class="track">
+                <div class="track-label">
+                  <span
+                    ><i class="dot user-dot"></i>User <small>LEFT</small></span
+                  ><span id="input-level" class="mono">— dBFS</span>
+                </div>
+                <canvas
+                  id="user-wave"
+                  height="64"
+                  aria-label="User input waveform"
+                ></canvas>
+                <div class="track-caption">
+                  <span id="input-status">Waiting for input</span
+                  ><span id="input-duration">0.0 s sent</span>
+                </div>
+              </div>
+              <div class="track">
+                <div class="track-label">
+                  <span
+                    ><i class="dot agent-dot"></i>AI <small>RIGHT</small></span
+                  ><span id="output-level" class="mono">— dBFS</span>
+                </div>
+                <canvas
+                  id="agent-wave"
+                  height="64"
+                  aria-label="Model output waveform"
+                ></canvas>
+                <div class="track-caption">
+                  <span id="output-status">Waiting for model</span
+                  ><span id="output-duration">0 frames received</span>
+                </div>
+              </div>
+            </div>
+            <div class="transcript-header">
+              <span>Model text</span
+              ><span id="token-state" class="mono">LISTENING</span>
+            </div>
+            <div id="transcript" class="transcript" aria-live="polite">
+              <p class="empty">
+                Start with a greeting. Model text and completed replies will
+                appear here.
+              </p>
+            </div>
+            <div class="downloads">
+              <span id="recording-status"
+                ><i class="dot"></i>Recording starts with the session</span
+              >
+              <div>
+                <button id="download-wav" disabled>↓ Conversation WAV</button
+                ><button id="download-json" disabled>↓ Debug JSON</button>
+              </div>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <span>First audio <small>since ready</small></span
+              ><b id="first-audio">—<small>ms</small></b>
+            </div>
+            <div class="metric">
+              <span>Audio frame latency <small>P50 / P95</small></span
+              ><b id="frame-latency">—<small>ms</small></b>
+            </div>
+            <div class="metric">
+              <span>Server backlog</span
+              ><b id="server-lag">—<small>frames</small></b>
+            </div>
+            <div class="metric">
+              <span>Playback queue</span
+              ><b id="playback-queue">0<small>ms</small></b>
+            </div>
+          </div>
+          <div class="panel performance">
+            <div class="panel-heading">
+              <h2>Performance</h2>
+              <span id="traffic" class="mono subtle">↑ 0 KB / ↓ 0 KB</span>
+            </div>
+            <div class="performance-content">
+              <div class="performance-chart">
+                <div class="chart-legend">
+                  <span class="step-color">● Model step P50</span
+                  ><span class="ear-color">● Ear P50</span
+                  ><span class="detok-color">● Detokenizer P50</span>
+                </div>
+                <canvas
+                  id="perf-chart"
+                  height="104"
+                  aria-label="Recent server timing statistics"
+                ></canvas
+                ><span class="chart-caption"
+                  >ms / Last 50 server samples · 200 ms frame budget</span
+                >
+              </div>
+              <div class="performance-table">
+                <div><span>Stage</span><span>P50</span><span>P95</span></div>
+                <div>
+                  <span>Model step</span><b id="step-p50">—</b
+                  ><b id="step-p95">—</b>
+                </div>
+                <div>
+                  <span>Ear</span><b id="ear-p50">—</b><b id="ear-p95">—</b>
+                </div>
+                <div>
+                  <span>Detokenizer</span><b id="detok-p50">—</b
+                  ><b id="detok-p95">—</b>
+                </div>
+              </div>
+            </div>
+            <div id="client-stats" class="client-stats">
+              AudioContext — · First text — · Rebuffers 0 · Missing frames 0
+            </div>
+          </div>
+        </section>
+      </div>
+      <section class="panel debug">
+        <div class="panel-heading">
+          <h2>Debug workspace</h2>
+          <span class="index">02</span>
+        </div>
+        <div class="debug-tabs" role="tablist" aria-label="Debug panels">
+          <button role="tab" aria-selected="true" data-tab="events">
+            Event log <span id="event-count">0</span></button
+          ><button role="tab" aria-selected="false" data-tab="frames">
+            Frames and tokens</button
+          ><button role="tab" aria-selected="false" data-tab="session">
+            Session / Server</button
+          ><label class="check compact"
+            ><input id="autoscroll" type="checkbox" checked />Auto-scroll</label
+          >
+        </div>
+        <div id="tab-events" class="debug-body" role="tabpanel">
+          <div id="events" class="event-log">
+            <p class="empty">
+              Connections, audio transfers, and server messages will appear in
+              time order.
+            </p>
+          </div>
+        </div>
+        <div id="tab-frames" class="debug-body" role="tabpanel" hidden>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Frame</th>
+                  <th>Time</th>
+                  <th>Text class</th>
+                  <th>Text</th>
+                  <th>Audio classes × 5</th>
+                </tr>
+              </thead>
+              <tbody id="frames"></tbody>
+            </table>
+          </div>
+        </div>
+        <div
+          id="tab-session"
+          class="debug-body session-debug"
+          role="tabpanel"
+          hidden
+        >
+          <div>
+            <h3>READY / Effective decode settings</h3>
+            <pre id="ready-json">No session started</pre>
+          </div>
+          <div>
+            <h3>Server health / Microphone settings</h3>
+            <pre id="health-json">—</pre>
+            <pre id="mic-json">—</pre>
+          </div>
+        </div>
+      </section>
+      <footer>
+        <span
+          >AWAKEN FULL DUPLEX
+          <span class="subtle">/ FULL DUPLEX INFERENCE</span></span
+        ><span
+          >Recordings follow the model timeline · User left / AI right</span
+        >
+      </footer>
+    </main>
+  </body>
+</html>

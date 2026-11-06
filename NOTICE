@@ -1,0 +1,24 @@
+Awaken Full Duplex
+Copyright 2026 the Awaken Full Duplex authors
+
+This product includes software developed by third parties:
+
+* Fun-Audio-Chat (https://github.com/FunAudioLLM/Fun-Audio-Chat), Alibaba Cloud,
+  Apache License 2.0. The model architecture (ear, token embedder, depth decoder,
+  configuration layout) in awaken_chat/models/ is derived from it.
+
+* CosyVoice (https://github.com/FunAudioLLM/CosyVoice), Alibaba Inc, Apache License 2.0.
+  awaken_chat/codec/cosyvoice/ is a vendored, trimmed copy of the CosyVoice3 flow-matching
+  model and HiFT vocoder (inference only). Each file states its changes; the upstream
+  configuration is kept verbatim as cosyvoice3.upstream.yaml. Parts of CosyVoice are in
+  turn modified from ESPnet, WeNet, Matcha-TTS, HiFi-GAN, ParallelWaveGAN and BigVGAN.
+  The bundled preset voices (assets/voices/preset-male.pt, preset-female.pt) are the CosyVoice
+  stock speakers "中文男" and "中文女", re-tokenized for CosyVoice3 and cut to a 3 s prompt.
+
+* Qwen3 (https://github.com/QwenLM/Qwen3), Alibaba Cloud, Apache License 2.0, used through
+  the `transformers` library as the text backbone and the depth decoder.
+
+* Whisper (https://github.com/openai/whisper), OpenAI, MIT License: the ear's architecture
+  and mel front-end follow Whisper's encoder, used through `transformers`.
+
+Model weights are distributed separately under their own licenses.
